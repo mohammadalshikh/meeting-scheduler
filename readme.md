@@ -34,3 +34,19 @@ Use Postman or similar (Thunder Client in vs code) to verify your endpoints beha
 
 Challenge
 Write this app using MVC architecture.
+
+
+TEST:
+- /begin   >> works
+- /game    >> works
+- /game/id >> works
+- /guess   >> works
+- curl -X POST http://127.0.0.1:5000/guess -H "Content-Type: application/json" -d '{"gameID": "1", "guess": "1111"}'
+
+- {
+  "gameId": "1",
+  "guessTime": "2026-08-21T11:27:58.382078",
+  "result": "e:1:p:1"
+}
+
+- /rounds
