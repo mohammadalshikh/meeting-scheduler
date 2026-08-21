@@ -1,48 +1,69 @@
 import random
-from flask import Blueprint,jsonify
+from flask import Blueprint,jsonify,request
+from datetime import datetime
+from service.game_service import GameService
 
 game_blueprint = Blueprint('game', __name__, url_prefix='/')
-game={}
+service = GameService()
 @game_blueprint.route('')
 
 def hello():
     return "Hello, World!"
 
-# jazib 
-@game_blueprint.route('/begin',methods=['POST'])
+# jazib
+@game_blueprint.route('/begin',methods=['GET'])
 def begin():
-    id=str(len(game)+1)
-    answer=random.randint(1,100)
-
-    game[id]={
-        "id": id,
-        "answer": answer,
-        "status": "active"
-    }
-    return jsonify({"game_id": id}), 201
+    answer = random.randint(1000, 9999)
+    gameid=service.create_game(answer)
+    
+    return jsonify({"game_id": gameid}), 201
 
 
-# mohammad 
+# jazib
+@game_blueprint.route('/game/<game_id>', methods=['GET'])
+def get_game(game_id):
+    if game_id not in service.get_all_games():
+        return jsonify({"error": "Game not found"}), 404
+
+    game_data = service.get_game(game_id)
+    return jsonify(game_data), 200
+
+
+# mohammad
 @game_blueprint.route('/game', methods=['GET'])
 def game():
-    pass
+    all_games = service.get_all_games()
+    return jsonify(all_games), 200
 
 
-
-
-#mehrin
+# mehrin
 @game_blueprint.route('/guess', methods=['POST'])
 def guess():
-    
-    pass
+    data = request.get_json()
+
+    game_id = str(data["gameID"])
+    user_guess = str(data["guess"])
+    game = service.get_game(game_id, get_answer=True)
+    answer = str(game["answer"])
+    result = GameService.calculate_result(user_guess, answer)
+
+    return jsonify({
+        "gameId": game_id,
+        "guessTime": datetime.now().isoformat(),
+        "result": result
+        }), 200
 
 
-
-#yong
-@game_blueprint.route('/rounds', method=['GET'])
+# yong
+@game_blueprint.route('/rounds', methods=['GET'])
 def get_rounds(game_id):
 
     game_rounds = []
 
     for round in rounds:
-        if round.game_id()
+        if round.game_id() == game_id:
+            game_rounds.append(round)
+
+    game_rounds.sort(key=lambda round: round.time)
+
+    return jsonify(game_rounds)
