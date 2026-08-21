@@ -45,7 +45,8 @@ def guess():
     user_guess = str(data["guess"])
     game = service.get_game(game_id, get_answer=True)
     answer = str(game["answer"])
-    result = GameService.calculate_result(user_guess, answer)
+    result = service.calculate_result(user_guess, answer)
+    service.add_guess(game_id, user_guess)
 
     return jsonify({
         "gameId": game_id,
@@ -55,15 +56,10 @@ def guess():
 
 
 # yong
-@game_blueprint.route('/rounds', methods=['GET'])
+@game_blueprint.route('/rounds/<game_id>', methods=['GET'])
 def get_rounds(game_id):
 
-    game_rounds = []
-
-    for round in rounds:
-        if round.game_id() == game_id:
-            game_rounds.append(round)
-
-    game_rounds.sort(key=lambda round: round.time)
+    game_obj = service.get_game(game_id)
+    game_rounds = game_obj["rounds"]
 
     return jsonify(game_rounds)

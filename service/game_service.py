@@ -29,7 +29,7 @@ class GameService:
 
     #mehrin
 
-    def calculate_result(answer, user_guess):
+    def calculate_result(self, answer, user_guess):
         exact = 0
         partial = 0
         
@@ -43,3 +43,8 @@ class GameService:
                 partial += 1
         
         return f"e:{exact}:p:{partial}"
+
+    def add_guess(self, id, guess):
+        if id in self.games:
+            print(self.games[id])
+            self.games[id].rounds.append(guess)

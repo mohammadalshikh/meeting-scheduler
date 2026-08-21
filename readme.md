@@ -37,10 +37,10 @@ Write this app using MVC architecture.
 
 
 TEST:
-- /begin   >> works
-- /game    >> works
-- /game/id >> works
-- /guess   >> works
+- /begin        >> works
+- /game         >> works
+- /game/game_id >> works
+- /guess        >> works
 - curl -X POST http://127.0.0.1:5000/guess -H "Content-Type: application/json" -d '{"gameID": "1", "guess": "1111"}'
 
 - {
@@ -49,4 +49,4 @@ TEST:
   "result": "e:1:p:1"
 }
 
-- /rounds
+- /rounds/game_id >> works
