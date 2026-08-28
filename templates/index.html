@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meeting Scheduler</title>
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+<main class="container">
+
+    <h1>Meeting Scheduler</h1>
+    <p>Find available meeting rooms and schedule meetings.</p>
+
+    {% with messages = get_flashed_messages() %}
+        {% for message in messages %}
+            <p class="message">{{ message }}</p>
+        {% endfor %}
+    {% endwith %}
+
+    <a href="{{ url_for('web.schedule') }}" class="button">
+        Find a Room
+    </a>
+
+    {% if user %}
+
+        <p>
+            Logged in as <strong>{{ user }}</strong>
+        </p>
+
+        <a href="{{ url_for('web.reservations') }}" class="button">
+            My Reservations
+        </a>
+
+        {% if role == "admin" %}
+
+            <a href="{{ url_for('web.admin_users') }}" class="button">
+                Manage Users
+            </a>
+
+            <a href="{{ url_for('web.admin_reservations') }}" class="button">
+                Manage Reservations
+            </a>
+
+        {% endif %}
+
+        <a href="{{ url_for('web.logout') }}" class="button">
+            Logout
+        </a>
+
+    {% else %}
+
+        <a href="{{ url_for('web.login') }}" class="button">
+            Login
+        </a>
+
+        <a href="{{ url_for('web.register') }}" class="button">
+            Register
+        </a>
+
+    {% endif %}
+
+</main>
+</body>
+</html>

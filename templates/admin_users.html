@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Users</title>
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+<main class="container">
+
+    <h1>Manage Users</h1>
+
+    {% if users %}
+
+        {% for user in users %}
+
+            <div class="card">
+
+                <h3>{{ user.username }}</h3>
+
+                <p>
+                    Email: {{ user.email }}
+                </p>
+
+                <p>
+                    Role: {{ user.role }}
+                </p>
+
+                <p>
+                    Created: {{ user.created_at }}
+                </p>
+
+            </div>
+
+        {% endfor %}
+
+    {% else %}
+
+        <p>No users found.</p>
+
+    {% endif %}
+
+    <a href="{{ url_for('web.index') }}">
+        Back
+    </a>
+
+</main>
+</body>
+</html>

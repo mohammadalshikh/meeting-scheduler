@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Reservations</title>
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+<main class="container">
+
+    <h1>My Reservations</h1>
+
+    {% with messages = get_flashed_messages() %}
+        {% for message in messages %}
+            <p class="message">{{ message }}</p>
+        {% endfor %}
+    {% endwith %}
+
+    {% if reservations %}
+
+        {% for reservation in reservations %}
+
+            <div class="card">
+
+                <h2>{{ reservation.title }}</h2>
+
+                <p>
+                    <strong>Room:</strong>
+                    {{ reservation.room_name }}
+                </p>
+
+                <p>
+                    <strong>Start:</strong>
+                    {{ reservation.start_time }}
+                </p>
+
+                <p>
+                    <strong>End:</strong>
+                    {{ reservation.end_time }}
+                </p>
+
+                <p>
+                    <strong>Status:</strong>
+                    {{ reservation.status }}
+                </p>
+
+                {% if reservation.status == "confirmed" %}
+
+                    <form method="POST"
+                          action="{{ url_for(
+                              'web.delete_reservation',
+                              reservation_id=reservation.id
+                          ) }}">
+
+                        <button type="submit">
+                            Delete Reservation
+                        </button>
+
+                    </form>
+
+                {% endif %}
+
+            </div>
+
+        {% endfor %}
+
+    {% else %}
+
+        <p>You have no reservations.</p>
+
+    {% endif %}
+
+    <a href="{{ url_for('web.schedule') }}">
+        Find a Room
+    </a>
+
+    <br>
+
+    <a href="{{ url_for('web.index') }}">
+        Home
+    </a>
+
+</main>
+</body>
+</html>

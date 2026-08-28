@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register</title>
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+<main class="container">
+
+    <h1>Create Account</h1>
+
+    {% with messages = get_flashed_messages() %}
+        {% for message in messages %}
+            <p class="message">{{ message }}</p>
+        {% endfor %}
+    {% endwith %}
+
+    <form method="POST"
+          action="{{ url_for('web.register') }}">
+
+        <label for="username">Username</label>
+        <input
+            id="username"
+            type="text"
+            name="username"
+            maxlength="50"
+            required
+        >
+
+        <label for="email">Email</label>
+        <input
+            id="email"
+            type="email"
+            name="email"
+            maxlength="255"
+            required
+        >
+
+        <label for="password">Password</label>
+        <input
+            id="password"
+            type="password"
+            name="password"
+            minlength="8"
+            required
+        >
+
+        <button type="submit">Register</button>
+
+    </form>
+
+    <p>
+        Already have an account?
+        <a href="{{ url_for('web.login') }}">Login</a>
+    </p>
+
+    <a href="{{ url_for('web.index') }}">Back</a>
+
+</main>
+</body>
+</html>

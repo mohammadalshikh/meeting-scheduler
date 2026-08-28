@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Reservations</title>
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+<main class="container">
+
+    <h1>Manage Reservations</h1>
+
+    {% if reservations %}
+
+        {% for reservation in reservations %}
+
+            <div class="card">
+
+                <h3>{{ reservation.title }}</h3>
+
+                <p>
+                    User: {{ reservation.username }}
+                </p>
+
+                <p>
+                    Room: {{ reservation.room_name }}
+                </p>
+
+                <p>
+                    {{ reservation.start_time }}
+                    –
+                    {{ reservation.end_time }}
+                </p>
+
+                <p>
+                    Status: {{ reservation.status }}
+                </p>
+
+                <form method="POST"
+                      action="{{ url_for(
+                          'web.delete_reservation',
+                          reservation_id=reservation.id
+                      ) }}">
+
+                    <button type="submit">
+                        Delete
+                    </button>
+
+                </form>
+
+            </div>
+
+        {% endfor %}
+
+    {% else %}
+
+        <p>No reservations found.</p>
+
+    {% endif %}
+
+    <a href="{{ url_for('web.index') }}">
+        Back
+    </a>
+
+</main>
+</body>
+</html>
