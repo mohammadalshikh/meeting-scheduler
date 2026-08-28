@@ -1,9 +1,9 @@
 from flask import Flask
-from controllers.game_controller import game_blueprint
+from controllers.controller import bp
 
 
 app = Flask(__name__)
-app.register_blueprint(game_blueprint)
+app.register_blueprint(bp)
 
 if __name__ == '__main__':
     app.run(debug=True)   
