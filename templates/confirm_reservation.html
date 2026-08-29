@@ -1,37 +1,36 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Confirm Reservation</title>
-    <link rel="stylesheet"
-          href="{{ url_for('static', filename='css/style.css') }}">
-</head>
 
-<body>
-<main class="container">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Confirm Reservation</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    </head>
 
-    <h1>Confirm Reservation</h1>
+    <body>
+        <main class="container">
 
-    {% with messages = get_flashed_messages() %}
-        {% for message in messages %}
+            <h1>Confirm Reservation</h1>
+
+            {% with messages = get_flashed_messages() %}
+            {% for message in messages %}
             <p class="message">{{ message }}</p>
-        {% endfor %}
-    {% endwith %}
+            {% endfor %}
+            {% endwith %}
 
-    <div class="card">
+            <div class="card">
 
-        <h2>{{ room.name }}</h2>
+                <h2>{{ room.name }}</h2>
 
-        <p><strong>Date:</strong> {{ date }}</p>
-        <p><strong>Time:</strong> {{ start }} - {{ end }}</p>
-        <p><strong>Capacity:</strong> {{ room.capacity }}</p>
-        <p><strong>Location:</strong> {{ room.location or "N/A" }}</p>
+                <p><strong>Date:</strong> {{ date }}</p>
+                <p><strong>Time:</strong> {{ start }} - {{ end }}</p>
+                <p><strong>Capacity:</strong> {{ room.capacity }}</p>
+                <p><strong>Location:</strong> {{ room.location or "N/A" }}</p>
 
-    </div>
+            </div>
 
-    <form method="POST"
-          action="{{ url_for(
+            <form method="POST" action="{{ url_for(
               'web.confirm_reservation',
               room_id=room.id,
               date=date,
@@ -39,28 +38,22 @@
               end=end
           ) }}">
 
-        <label for="title">Meeting Title</label>
+                <label for="title">Meeting Title</label>
 
-        <input
-            id="title"
-            type="text"
-            name="title"
-            maxlength="150"
-            placeholder="Team Meeting"
-            required
-            autofocus
-        >
+                <input id="title" type="text" name="title" maxlength="150" placeholder="Team Meeting" required
+                    autofocus>
 
-        <button type="submit">
-            Confirm
-        </button>
+                <button type="submit">
+                    Confirm
+                </button>
 
-    </form>
+            </form>
 
-    <a href="{{ url_for('web.schedule') }}">
-        Cancel
-    </a>
+            <a href="{{ url_for('web.schedule') }}">
+                Cancel
+            </a>
 
-</main>
-</body>
+        </main>
+    </body>
+
 </html>

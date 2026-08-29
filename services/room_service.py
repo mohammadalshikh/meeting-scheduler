@@ -78,6 +78,68 @@ class RoomService:
             connection.close()
 
     @staticmethod
+    def get_daily_schedule(reservation_date):
+        connection = DbService.get_connection()
+
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT
+                        r.*,
+                        res.id AS reservation_id,
+                        res.user_id,
+                        res.title,
+                        res.start_time,
+                        res.end_time,
+                        res.status
+                    FROM rooms r
+                    LEFT JOIN reservations res
+                        ON res.room_id = r.id
+                        AND DATE(res.start_time) = %s
+                        AND res.status = 'confirmed'
+                    WHERE r.active = TRUE
+                    ORDER BY r.name, res.start_time
+                    """,
+                    (reservation_date,),
+                )
+
+                rows = cursor.fetchall()
+
+            rooms = {}
+
+            for row in rows:
+                room_id = row["id"]
+
+                if room_id not in rooms:
+                    rooms[room_id] = {
+                        "id": room_id,
+                        "name": row["name"],
+                        "capacity": row["capacity"],
+                        "location": row["location"],
+                        "description": row["description"],
+                        "active": bool(row["active"]),
+                        "reservations": [],
+                    }
+
+                if row["reservation_id"] is not None:
+                    rooms[room_id]["reservations"].append(
+                        {
+                            "id": row["reservation_id"],
+                            "user_id": row["user_id"],
+                            "title": row["title"],
+                            "start_time": row["start_time"],
+                            "end_time": row["end_time"],
+                            "status": row["status"],
+                        }
+                    )
+
+            return list(rooms.values())
+
+        finally:
+            connection.close()
+
+    @staticmethod
     def create(name, capacity, location, description, actor_id):
         connection = DbService.get_connection()
 

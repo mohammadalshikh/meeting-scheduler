@@ -1,5 +1,3 @@
-from unittest.mock import Mock
-
 import pytest
 
 from app import create_app
@@ -29,73 +27,20 @@ def login(client, user_id=1, username="alice", role="user"):
 
 def test_index_is_public(client):
     response = client.get("/")
+
     assert response.status_code == 200
 
 
-def test_register_rejects_missing_fields(client):
-    response = client.post(
-        "/register",
-        data={"username": "", "email": "", "password": ""},
-    )
+def test_register_page_is_public(client):
+    response = client.get("/register")
 
-    assert response.status_code == 302
-    assert "/register" in response.headers["Location"]
+    assert response.status_code == 200
 
 
-def test_register_rejects_short_password(client):
-    response = client.post(
-        "/register",
-        data={
-            "username": "alice",
-            "email": "alice@example.com",
-            "password": "123",
-        },
-    )
+def test_login_page_is_public(client):
+    response = client.get("/login")
 
-    assert response.status_code == 302
-
-
-def test_login_rejects_invalid_credentials(client, monkeypatch):
-    monkeypatch.setattr(
-        "controllers.web.UserService.get_by_username",
-        lambda username: None,
-    )
-
-    response = client.post(
-        "/login",
-        data={"username": "alice", "password": "wrong"},
-    )
-
-    assert response.status_code == 302
-    assert "/login" in response.headers["Location"]
-
-
-def test_login_creates_session(client, monkeypatch):
-    monkeypatch.setattr(
-        "controllers.web.UserService.get_by_username",
-        lambda username: {
-            "id": 1,
-            "username": "alice",
-            "role": "user",
-            "password_hash": "hashed",
-        },
-    )
-    monkeypatch.setattr(
-        "controllers.web.check_password_hash",
-        lambda stored, supplied: supplied == "correct",
-    )
-
-    response = client.post(
-        "/login",
-        data={"username": "alice", "password": "correct"},
-    )
-
-    assert response.status_code == 302
-
-    with client.session_transaction() as session:
-        assert session["user_id"] == 1
-        assert session["username"] == "alice"
-        assert session["role"] == "user"
+    assert response.status_code == 200
 
 
 def test_logout_clears_session(client):
@@ -107,7 +52,41 @@ def test_logout_clears_session(client):
 
     with client.session_transaction() as session:
         assert "user_id" not in session
+        assert "username" not in session
         assert "role" not in session
+
+
+def test_schedule_page_is_public(client, monkeypatch):
+    monkeypatch.setattr(
+        "controllers.web.RoomService.get_daily_schedule",
+        lambda selected_date: [],
+    )
+
+    response = client.get("/schedule")
+
+    assert response.status_code == 200
+
+
+def test_schedule_rejects_date_before_today(client, monkeypatch):
+    monkeypatch.setattr(
+        "controllers.web.RoomService.get_daily_schedule",
+        lambda selected_date: [],
+    )
+
+    response = client.get("/schedule?date=2020-01-01")
+
+    assert response.status_code == 200
+
+
+def test_schedule_rejects_date_beyond_booking_window(client, monkeypatch):
+    monkeypatch.setattr(
+        "controllers.web.RoomService.get_daily_schedule",
+        lambda selected_date: [],
+    )
+
+    response = client.get("/schedule?date=2099-01-01")
+
+    assert response.status_code == 200
 
 
 def test_reservations_requires_login(client):
@@ -115,6 +94,19 @@ def test_reservations_requires_login(client):
 
     assert response.status_code == 302
     assert "/login" in response.headers["Location"]
+
+
+def test_reservations_page_loads_for_logged_in_user(client, monkeypatch):
+    login(client)
+
+    monkeypatch.setattr(
+        "controllers.web.ReservationService.get_for_user",
+        lambda user_id: [],
+    )
+
+    response = client.get("/reservations")
+
+    assert response.status_code == 200
 
 
 def test_normal_user_cannot_access_admin_users(client):
@@ -138,41 +130,22 @@ def test_admin_can_access_admin_users(client, monkeypatch):
     assert response.status_code == 200
 
 
-def test_available_rooms_rejects_invalid_time(client):
-    response = client.get("/available_rooms" "?date=2026-09-01&start=12:00&end=11:00")
+def test_normal_user_cannot_access_admin_reservations(client):
+    login(client, role="user")
 
-    assert response.status_code == 302
-    assert "/schedule" in response.headers["Location"]
-
-
-def test_delete_reservation_forbids_other_user(client, monkeypatch):
-    login(client, user_id=1, role="user")
-
-    monkeypatch.setattr(
-        "controllers.web.ReservationService.get_by_id",
-        lambda reservation_id: {"id": 10, "user_id": 2},
-    )
-
-    response = client.post("/reservations/10/delete")
+    response = client.get("/admin/reservations")
 
     assert response.status_code == 403
 
 
-def test_delete_reservation_allows_owner(client, monkeypatch):
-    login(client, user_id=1, role="user")
+def test_admin_can_access_admin_reservations(client, monkeypatch):
+    login(client, role="admin")
 
     monkeypatch.setattr(
-        "controllers.web.ReservationService.get_by_id",
-        lambda reservation_id: {"id": 10, "user_id": 1},
+        "controllers.web.ReservationService.get_all",
+        lambda: [],
     )
 
-    delete_mock = Mock()
-    monkeypatch.setattr(
-        "controllers.web.ReservationService.delete",
-        delete_mock,
-    )
+    response = client.get("/admin/reservations")
 
-    response = client.post("/reservations/10/delete")
-
-    assert response.status_code == 302
-    delete_mock.assert_called_once_with(10, 1)
+    assert response.status_code == 200

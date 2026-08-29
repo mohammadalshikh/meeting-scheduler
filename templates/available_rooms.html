@@ -1,27 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Available Rooms</title>
-    <link rel="stylesheet"
-          href="{{ url_for('static', filename='css/style.css') }}">
-</head>
 
-<body>
-<main class="container">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Available Rooms</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    </head>
 
-    <h1>Available Rooms</h1>
+    <body>
+        <main class="container">
 
-    <p>
-        <strong>Date:</strong> {{ date }}
-        <br>
-        <strong>Time:</strong> {{ start }} - {{ end }}
-    </p>
+            <h1>Available Rooms</h1>
 
-    {% if rooms %}
+            <p>
+                <strong>Date:</strong> {{ date }}
+                <br>
+                <strong>Time:</strong> {{ start }} - {{ end }}
+            </p>
 
-        {% for room in rooms %}
+            {% if rooms %}
+
+            {% for room in rooms %}
 
             <div class="card">
 
@@ -39,35 +39,33 @@
                     {{ room.description or "No description." }}
                 </p>
 
-                <a
-                    class="button"
-                    href="{{ url_for(
+                <a class="button" href="{{ url_for(
                         'web.confirm_reservation',
                         room_id=room.id,
                         date=date,
                         start=start,
                         end=end
-                    ) }}"
-                >
+                    ) }}">
                     Select Room
                 </a>
 
             </div>
 
-        {% endfor %}
+            {% endfor %}
 
-    {% else %}
+            {% else %}
 
-        <p>
-            No rooms are available during that time.
-        </p>
+            <p>
+                No rooms are available during that time.
+            </p>
 
-    {% endif %}
+            {% endif %}
 
-    <p>
-        <a href="{{ url_for('web.schedule') }}">Search Again</a>
-    </p>
+            <p>
+                <a href="{{ url_for('web.schedule') }}">Search Again</a>
+            </p>
 
-</main>
-</body>
+        </main>
+    </body>
+
 </html>

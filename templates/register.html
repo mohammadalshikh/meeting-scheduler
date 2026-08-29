@@ -1,65 +1,93 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register</title>
-    <link rel="stylesheet"
-          href="{{ url_for('static', filename='css/style.css') }}">
-</head>
 
-<body>
-<main class="container">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Register</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    </head>
 
-    <h1>Create Account</h1>
+    <body>
 
-    {% with messages = get_flashed_messages() %}
-        {% for message in messages %}
-            <p class="message">{{ message }}</p>
-        {% endfor %}
-    {% endwith %}
+        <main class="container">
 
-    <form method="POST"
-          action="{{ url_for('web.register') }}">
+            <a href="{{ url_for('web.index') }}">
+                Back
+            </a>
 
-        <label for="username">Username</label>
-        <input
-            id="username"
-            type="text"
-            name="username"
-            maxlength="50"
-            required
-        >
+            <h1>Create Account</h1>
 
-        <label for="email">Email</label>
-        <input
-            id="email"
-            type="email"
-            name="email"
-            maxlength="255"
-            required
-        >
+            <div id="message"></div>
 
-        <label for="password">Password</label>
-        <input
-            id="password"
-            type="password"
-            name="password"
-            minlength="8"
-            required
-        >
+            <form id="register-form">
 
-        <button type="submit">Register</button>
+                <label for="username">Username</label>
 
-    </form>
+                <input id="username" type="text" name="username" maxlength="50" required>
 
-    <p>
-        Already have an account?
-        <a href="{{ url_for('web.login') }}">Login</a>
-    </p>
+                <label for="email">Email</label>
 
-    <a href="{{ url_for('web.index') }}">Back</a>
+                <input id="email" type="email" name="email" maxlength="255" required>
 
-</main>
-</body>
+                <label for="password">Password</label>
+
+                <input id="password" type="password" name="password" minlength="8" required>
+
+                <button type="submit">
+                    Register
+                </button>
+
+            </form>
+
+            <p>
+                Already have an account?
+                <a href="{{ url_for('web.login') }}">
+                    Login
+                </a>
+            </p>
+
+        </main>
+
+        <script>
+            const form = document.getElementById("register-form");
+            const message = document.getElementById("message");
+
+            form.addEventListener("submit", async event => {
+                event.preventDefault();
+
+                message.innerHTML = "";
+
+                try {
+                    const response = await fetch("/api/auth/register", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            username: document.getElementById("username").value.trim(),
+                            email: document.getElementById("email").value.trim(),
+                            password: document.getElementById("password").value
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        message.innerHTML =
+                            `<p class="message">${data.error}</p>`;
+                        return;
+                    }
+
+                    window.location.href = "{{ url_for('web.login') }}";
+
+                } catch (error) {
+                    message.innerHTML =
+                        '<p class="message">Unable to create account.</p>';
+                }
+            });
+        </script>
+
+    </body>
+
 </html>

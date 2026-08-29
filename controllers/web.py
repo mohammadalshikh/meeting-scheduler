@@ -1,22 +1,21 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import wraps
 
 from flask import (
     Blueprint,
-    flash,
-    redirect,
     render_template,
     request,
     session,
+    redirect,
     url_for,
 )
-from werkzeug.security import check_password_hash, generate_password_hash
 
-from services.reservation_service import ReservationService
 from services.room_service import RoomService
+from services.reservation_service import ReservationService
 from services.user_service import UserService
 
 web = Blueprint("web", __name__)
+
 
 def login_required(view):
     @wraps(view)
@@ -45,7 +44,11 @@ def admin_required(view):
 
 @web.route("/")
 def index():
-    return render_template("index.html", user=session.get("username"), role=session.get("role"))
+    return render_template(
+        "index.html",
+        user=session.get("username"),
+        role=session.get("role"),
+    )
 
 
 @web.route("/health")
@@ -53,72 +56,17 @@ def health():
     return {"status": "ok"}, 200
 
 
-@web.route("/register", methods=["GET", "POST"])
+@web.route("/register")
 def register():
-    if request.method == "GET":
-        return render_template("register.html")
-
-    username = request.form.get("username", "").strip()
-    email = request.form.get("email", "").strip()
-    password = request.form.get("password", "")
-
-    if not username or not email or not password:
-        flash("All fields are required.")
-        return redirect(url_for("web.register"))
-
-    if len(password) < 8:
-        flash("Password must be at least 8 characters.")
-        return redirect(url_for("web.register"))
-
-    if UserService.get_by_username(username):
-        flash("Username already exists.")
-        return redirect(url_for("web.register"))
-
-    if UserService.get_by_email(email):
-        flash("Email already exists.")
-        return redirect(url_for("web.register"))
-
-    try:
-        UserService.create(
-            username=username,
-            email=email,
-            password_hash=generate_password_hash(password),
-            role="user",
-        )
-    except Exception:
-        flash("Could not create account.")
-        return redirect(url_for("web.register"))
-
-    flash("Account created. Please log in.")
-    return redirect(url_for("web.login"))
+    return render_template("register.html")
 
 
-@web.route("/login", methods=["GET", "POST"])
+@web.route("/login")
 def login():
-    if request.method == "GET":
-        return render_template("login.html", next=request.args.get("next"))
-
-    username = request.form.get("username", "").strip()
-    password = request.form.get("password", "")
-
-    user = UserService.get_by_username(username)
-
-    if user is None or not check_password_hash(user["password_hash"], password):
-        flash("Invalid username or password.")
-
-        return redirect(url_for("web.login", next=request.args.get("next")))
-
-    session.clear()
-
-    session["user_id"] = user["id"]
-    session["username"] = user["username"]
-    session["role"] = user["role"]
-    next_url = request.args.get("next")
-
-    if next_url and next_url.startswith("/"):
-        return redirect(next_url)
-
-    return redirect(url_for("web.index"))
+    return render_template(
+        "login.html",
+        next=request.args.get("next"),
+    )
 
 
 @web.route("/logout")
@@ -129,137 +77,77 @@ def logout():
 
 @web.route("/schedule")
 def schedule():
-    rooms = RoomService.get_all(active_only=True)
+    now = datetime.now()
+    today = now.date()
 
-    return render_template("schedule.html", rooms=rooms)
+    if (
+        now.time()
+        > datetime.strptime(
+            "20:30",
+            "%H:%M",
+        ).time()
+    ):
+        today += timedelta(days=1)
 
+    max_date = today + timedelta(days=7)
 
-@web.route("/available_rooms")
-def available_rooms():
-    date = request.args.get("date", "")
-    start = request.args.get("start", "")
-    end = request.args.get("end", "")
-
-    if not date or not start or not end:
-        flash("Date, start time and end time are required.")
-        return redirect(url_for("web.schedule"))
-
-    try:
-        start_time = datetime.strptime(f"{date} {start}", "%Y-%m-%d %H:%M")
-
-        end_time = datetime.strptime(f"{date} {end}", "%Y-%m-%d %H:%M")
-
-    except ValueError:
-        flash("Invalid date or time.")
-        return redirect(url_for("web.schedule"))
-
-    if end_time <= start_time:
-        flash("End time must be after start time.")
-        return redirect(url_for("web.schedule"))
-
-    rooms = RoomService.get_available(start_time, end_time)
-
-    return render_template(
-        "available_rooms.html",
-        rooms=rooms,
-        date=date,
-        start=start,
-        end=end,
+    date_value = request.args.get(
+        "date",
+        today.isoformat(),
     )
 
-
-@web.route("/confirm_reservation", methods=["GET", "POST"])
-def confirm_reservation():
-    room_id = request.values.get("room_id")
-    date = request.values.get("date")
-    start = request.values.get("start")
-    end = request.values.get("end")
-
-    if not room_id or not date or not start or not end:
-        flash("Invalid reservation request.")
-        return redirect(url_for("web.schedule"))
-
     try:
-        room_id = int(room_id)
+        selected_date = datetime.strptime(
+            date_value,
+            "%Y-%m-%d",
+        ).date()
+    except ValueError:
+        selected_date = today
 
-        start_time = datetime.strptime(f"{date} {start}", "%Y-%m-%d %H:%M")
+    if selected_date < today:
+        selected_date = today
 
-        end_time = datetime.strptime(f"{date} {end}", "%Y-%m-%d %H:%M")
+    if selected_date > max_date:
+        selected_date = max_date
 
-    except (ValueError, TypeError):
-        flash("Invalid reservation details.")
-        return redirect(url_for("web.schedule"))
+    rooms = RoomService.get_daily_schedule(selected_date)
 
-    if end_time <= start_time:
-        flash("End time must be after start time.")
-        return redirect(url_for("web.schedule"))
+    for room in rooms:
+        for reservation in room["reservations"]:
+            start_time = reservation["start_time"]
+            end_time = reservation["end_time"]
 
-    room = RoomService.get_by_id(room_id)
+            if hasattr(start_time, "isoformat"):
+                reservation["start_time"] = start_time.isoformat()
 
-    if room is None or not room["active"]:
-        flash("Room is unavailable.")
-        return redirect(url_for("web.schedule"))
+            if hasattr(end_time, "isoformat"):
+                reservation["end_time"] = end_time.isoformat()
 
-    if request.method == "GET":
-        return render_template(
-            "confirm_reservation.html",
-            room=room,
-            date=date,
-            start=start,
-            end=end,
-        )
+            start_minutes = start_time.hour * 60 + start_time.minute - 540
 
-    if "user_id" not in session:
-        next_url = url_for(
-            "web.confirm_reservation",
-            room_id=room_id,
-            date=date,
-            start=start,
-            end=end,
-        )
+            end_minutes = end_time.hour * 60 + end_time.minute - 540
 
-        return redirect(
-            url_for(
-                "web.login",
-                next=next_url,
-            )
-        )
+            reservation["left"] = (start_minutes / 720) * 100
 
-    title = request.form.get("title", "").strip()
+            reservation["width"] = ((end_minutes - start_minutes) / 720) * 100
 
-    if not title:
-        flash("Meeting title is required.")
+    previous_date = None
+    next_date = None
 
-        return render_template(
-            "confirm_reservation.html",
-            room=room,
-            date=date,
-            start=start,
-            end=end,
-        )
+    if selected_date > today:
+        previous_date = selected_date - timedelta(days=1)
 
-    try:
-        ReservationService.create(
-            user_id=session["user_id"],
-            room_id=room_id,
-            title=title,
-            start_time=start_time,
-            end_time=end_time,
-        )
-    except ValueError as error:
-        flash(str(error))
+    if selected_date < max_date:
+        next_date = selected_date + timedelta(days=1)
 
-        return render_template(
-            "confirm_reservation.html",
-            room=room,
-            date=date,
-            start=start,
-            end=end,
-        )
-
-    flash("Reservation created successfully.")
-
-    return redirect(url_for("web.reservations"))
+    return render_template(
+        "schedule.html",
+        rooms=rooms,
+        selected_date=selected_date.strftime("%b %-d, %Y"),
+        selected_date_value=selected_date.isoformat(),
+        previous_date=(previous_date.isoformat() if previous_date else None),
+        next_date=(next_date.isoformat() if next_date else None),
+    )
 
 
 @web.route("/reservations")
@@ -270,36 +158,15 @@ def reservations():
     return render_template("reservations.html", reservations=reservations)
 
 
-@web.route("/reservations/<int:reservation_id>/delete", methods=["POST"])
-@login_required
-def delete_reservation(reservation_id):
-    reservation = ReservationService.get_by_id(reservation_id)
-
-    if reservation is None:
-        flash("Reservation not found.")
-        return redirect(url_for("web.reservations"))
-
-    if reservation["user_id"] != session["user_id"] and session.get("role") != "admin":
-        return "Forbidden", 403
-
-    try:
-        ReservationService.delete(reservation_id, session["user_id"])
-
-    except ValueError as error:
-        flash(str(error))
-        return redirect(url_for("web.reservations"))
-
-    flash("Reservation deleted.")
-
-    return redirect(url_for("web.reservations"))
-
-
 @web.route("/admin/users")
 @admin_required
 def admin_users():
     users = UserService.get_all()
 
-    return render_template("admin_users.html", users=users)
+    return render_template(
+        "admin_users.html",
+        users=users,
+    )
 
 
 @web.route("/admin/reservations")
@@ -307,4 +174,7 @@ def admin_users():
 def admin_reservations():
     reservations = ReservationService.get_all()
 
-    return render_template("admin_reservations.html",reservations=reservations)
+    return render_template(
+        "admin_reservations.html",
+        reservations=reservations,
+    )

@@ -28,7 +28,7 @@ def test_admin_users_requires_authentication(client):
     response = client.get("/api/admin/users")
 
     assert response.status_code == 401
-    assert response.json == {"error": "Authentication required"}
+    assert response.json == {"error": "Admin authentication required"}
 
 
 def test_admin_users_forbids_normal_user(client):
@@ -72,6 +72,7 @@ def test_admin_can_create_user(client, monkeypatch):
         "controllers.api.UserService.get_by_username",
         lambda username: None,
     )
+
     monkeypatch.setattr(
         "controllers.api.UserService.get_by_email",
         lambda email: None,
@@ -184,12 +185,40 @@ def test_room_lookup_returns_404(client, monkeypatch):
     assert response.json == {"error": "Room not found"}
 
 
+def test_room_schedule_returns_rooms_for_date(client, monkeypatch):
+    monkeypatch.setattr(
+        "controllers.api.RoomService.get_daily_schedule",
+        lambda selected_date: [
+            {
+                "id": 1,
+                "name": "Room A",
+                "reservations": [],
+            }
+        ],
+    )
+
+    response = client.get("/api/rooms/schedule?date=2026-09-01")
+
+    assert response.status_code == 200
+    assert response.json[0]["name"] == "Room A"
+
+
+def test_room_schedule_requires_date(client):
+    response = client.get("/api/rooms/schedule")
+
+    assert response.status_code == 400
+    assert response.json == {"error": "date is required"}
+
+
 def test_normal_user_cannot_create_room(client):
     login(client, role="user")
 
     response = client.post(
         "/api/rooms",
-        json={"name": "Room E", "capacity": 10},
+        json={
+            "name": "Room E",
+            "capacity": 10,
+        },
     )
 
     assert response.status_code == 403
@@ -220,6 +249,45 @@ def test_admin_can_create_room(client, monkeypatch):
     assert response.json["name"] == "Room E"
 
 
+def test_admin_can_update_room(client, monkeypatch):
+    login(client, role="admin")
+
+    monkeypatch.setattr(
+        "controllers.api.RoomService.update",
+        lambda **kwargs: {
+            "id": kwargs["room_id"],
+            "name": kwargs["name"],
+            "capacity": kwargs["capacity"],
+            "active": kwargs["active"],
+        },
+    )
+
+    response = client.put(
+        "/api/rooms/1",
+        json={
+            "name": "Updated Room",
+            "capacity": 8,
+            "active": True,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json["name"] == "Updated Room"
+
+
+def test_admin_can_delete_room(client, monkeypatch):
+    login(client, role="admin")
+
+    monkeypatch.setattr(
+        "controllers.api.RoomService.delete",
+        lambda room_id, actor_id: None,
+    )
+
+    response = client.delete("/api/rooms/1")
+
+    assert response.status_code == 204
+
+
 def test_available_rooms_validates_datetime(client):
     response = client.get("/api/rooms/available?start=bad&end=bad")
 
@@ -227,47 +295,71 @@ def test_available_rooms_validates_datetime(client):
     assert response.json["error"] == "Invalid datetime format"
 
 
-def test_reservations_require_authentication(client):
-    response = client.get("/api/reservations")
+def test_reservation_validation_requires_authentication(client):
+    response = client.post(
+        "/api/reservations/validate",
+        json={
+            "room_id": 1,
+            "start_time": "2026-09-01T10:00:00",
+            "end_time": "2026-09-01T11:00:00",
+        },
+    )
 
     assert response.status_code == 401
 
 
-def test_user_gets_only_own_reservations(client, monkeypatch):
+def test_reservation_validation_accepts_valid_request(
+    client,
+    monkeypatch,
+):
     login(client, user_id=1, role="user")
 
     monkeypatch.setattr(
-        "controllers.api.ReservationService.get_for_user",
-        lambda user_id: [
-            {
-                "id": 10,
-                "user_id": user_id,
-                "room_id": 1,
-                "title": "Meeting",
-            }
-        ],
+        "controllers.api.ReservationService.validate_request",
+        lambda **kwargs: None,
     )
 
-    response = client.get("/api/reservations")
-
-    assert response.status_code == 200
-    assert response.json[0]["user_id"] == 1
-
-
-def test_user_cannot_read_another_users_reservation(client, monkeypatch):
-    login(client, user_id=1, role="user")
-
-    monkeypatch.setattr(
-        "controllers.api.ReservationService.get_by_id",
-        lambda reservation_id: {
-            "id": reservation_id,
-            "user_id": 2,
+    response = client.post(
+        "/api/reservations/validate",
+        json={
+            "room_id": 1,
+            "start_time": "2026-09-01T10:00:00",
+            "end_time": "2026-09-01T11:00:00",
         },
     )
 
-    response = client.get("/api/reservations/10")
+    assert response.status_code == 200
+    assert response.json == {"valid": True}
 
-    assert response.status_code == 403
+
+def test_reservation_validation_returns_business_rule_error(
+    client,
+    monkeypatch,
+):
+    login(client, user_id=1, role="user")
+
+    def fake_validate(**kwargs):
+        raise ValueError("You can reserve a maximum of 5 hours per day")
+
+    monkeypatch.setattr(
+        "controllers.api.ReservationService.validate_request",
+        fake_validate,
+    )
+
+    response = client.post(
+        "/api/reservations/validate",
+        json={
+            "room_id": 1,
+            "start_time": "2026-09-01T10:00:00",
+            "end_time": "2026-09-01T11:00:00",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json == {
+        "valid": False,
+        "error": "You can reserve a maximum of 5 hours per day",
+    }
 
 
 def test_user_can_create_reservation(client, monkeypatch):
@@ -298,7 +390,10 @@ def test_user_can_create_reservation(client, monkeypatch):
     assert response.json["user_id"] == 1
 
 
-def test_user_cannot_update_another_users_reservation(client, monkeypatch):
+def test_user_cannot_update_another_users_reservation(
+    client,
+    monkeypatch,
+):
     login(client, user_id=1, role="user")
 
     monkeypatch.setattr(
@@ -331,6 +426,40 @@ def test_user_can_delete_own_reservation(client, monkeypatch):
         lambda reservation_id: {
             "id": reservation_id,
             "user_id": 1,
+        },
+    )
+
+    deleted = {}
+
+    def fake_delete(reservation_id, actor_id):
+        deleted["reservation_id"] = reservation_id
+        deleted["actor_id"] = actor_id
+
+    monkeypatch.setattr(
+        "controllers.api.ReservationService.delete",
+        fake_delete,
+    )
+
+    response = client.delete("/api/reservations/10")
+
+    assert response.status_code == 204
+    assert deleted == {
+        "reservation_id": 10,
+        "actor_id": 1,
+    }
+
+
+def test_admin_can_delete_another_users_reservation(
+    client,
+    monkeypatch,
+):
+    login(client, user_id=1, role="admin")
+
+    monkeypatch.setattr(
+        "controllers.api.ReservationService.get_by_id",
+        lambda reservation_id: {
+            "id": reservation_id,
+            "user_id": 2,
         },
     )
 

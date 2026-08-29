@@ -1,55 +1,101 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
-    <link rel="stylesheet"
-          href="{{ url_for('static', filename='css/style.css') }}">
-</head>
 
-<body>
-<main class="container">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Login</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    </head>
 
-    <h1>Login</h1>
+    <body>
 
-    {% with messages = get_flashed_messages() %}
-        {% for message in messages %}
-            <p class="message">{{ message }}</p>
-        {% endfor %}
-    {% endwith %}
+        <main class="container">
 
-    <form method="POST"
-          action="{{ url_for('web.login', next=request.args.get('next')) }}">
+            <a href="{{ url_for('web.index') }}">
+                Back
+            </a>
 
-        <label for="username">Username</label>
-        <input
-            id="username"
-            type="text"
-            name="username"
-            required
-            autofocus
-        >
+            <h1>Login</h1>
 
-        <label for="password">Password</label>
-        <input
-            id="password"
-            type="password"
-            name="password"
-            required
-        >
+            <div id="message"></div>
 
-        <button type="submit">Login</button>
+            <form id="login-form">
 
-    </form>
+                <label for="username">Username</label>
 
-    <p>
-        Don't have an account?
-        <a href="{{ url_for('web.register') }}">Register</a>
-    </p>
+                <input id="username" type="text" name="username" required autofocus>
 
-    <a href="{{ url_for('web.index') }}">Back</a>
+                <label for="password">Password</label>
 
-</main>
-</body>
+                <input id="password" type="password" name="password" required>
+
+                <button type="submit">
+                    Login
+                </button>
+
+            </form>
+
+            <p>
+                Don't have an account?
+                <a href="{{ url_for('web.register') }}">
+                    Register
+                </a>
+            </p>
+
+        </main>
+
+        <script>
+            const form = document.getElementById("login-form");
+            const message = document.getElementById("message");
+
+            form.addEventListener("submit", async function (event) {
+                event.preventDefault();
+
+                message.innerHTML = "";
+
+                const username = document
+                    .getElementById("username")
+                    .value
+                    .trim();
+
+                const password = document
+                    .getElementById("password")
+                    .value;
+
+                try {
+                    const response = await fetch("/api/auth/login", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            username: username,
+                            password: password
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        message.innerHTML =
+                            "<p class=\"message\">" +
+                            data.error +
+                            "</p>";
+
+                        return;
+                    }
+
+                    window.location.href = "/";
+                } catch (error) {
+                    message.innerHTML =
+                        "<p class=\"message\">" +
+                        "Unable to log in." +
+                        "</p>";
+                }
+            });
+        </script>
+
+    </body>
+
 </html>

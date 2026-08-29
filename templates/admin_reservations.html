@@ -1,70 +1,155 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Reservations</title>
-    <link rel="stylesheet"
-          href="{{ url_for('static', filename='css/style.css') }}">
-</head>
 
-<body>
-<main class="container">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Manage Reservations</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    </head>
 
-    <h1>Manage Reservations</h1>
+    <body>
 
-    {% if reservations %}
+        <main class="container">
 
-        {% for reservation in reservations %}
+            <a href="{{ url_for('web.index') }}">
+                Back
+            </a>
+
+            <h1>Manage Reservations</h1>
+
+            {% with messages = get_flashed_messages() %}
+            {% for message in messages %}
+            <p class="message">{{ message }}</p>
+            {% endfor %}
+            {% endwith %}
+
+            {% if reservations %}
+
+            {% for reservation in reservations %}
 
             <div class="card">
 
                 <h3>{{ reservation.title }}</h3>
 
                 <p>
-                    User: {{ reservation.username }}
+                    <strong>User:</strong>
+                    {{ reservation.username }}
                 </p>
 
                 <p>
-                    Room: {{ reservation.room_name }}
+                    <strong>Room:</strong>
+                    {{ reservation.room_name }}
                 </p>
 
                 <p>
-                    {{ reservation.start_time }}
-                    –
-                    {{ reservation.end_time }}
+                    <strong>Start:</strong>
+                    {{ reservation.start_time.strftime("%b %-d, %Y %-I:%M %p") }}
                 </p>
 
                 <p>
-                    Status: {{ reservation.status }}
+                    <strong>End:</strong>
+                    {{ reservation.end_time.strftime("%b %-d, %Y %-I:%M %p") }}
                 </p>
 
-                <form method="POST"
-                      action="{{ url_for(
-                          'web.delete_reservation',
-                          reservation_id=reservation.id
-                      ) }}">
+                <p>
+                    <strong>Status:</strong>
+                    {{ reservation.status }}
+                </p>
 
-                    <button type="submit">
-                        Delete
-                    </button>
+                {% if reservation.status == "confirmed" %}
 
-                </form>
+                <button type="button" class="delete-reservation" data-reservation-id="{{ reservation.id }}">
+                    Delete
+                </button>
+
+                {% endif %}
 
             </div>
 
-        {% endfor %}
+            {% endfor %}
 
-    {% else %}
+            {% else %}
 
-        <p>No reservations found.</p>
+            <p>No reservations found.</p>
 
-    {% endif %}
+            {% endif %}
 
-    <a href="{{ url_for('web.index') }}">
-        Back
-    </a>
+        </main>
 
-</main>
-</body>
+        <script>
+            document
+                .querySelectorAll(".delete-reservation")
+                .forEach(button => {
+                    button.addEventListener("click", async function () {
+                        const reservationId = this.dataset.reservationId;
+
+                        try {
+                            const response = await fetch(
+                                "/api/reservations/" + reservationId,
+                                {
+                                    method: "DELETE"
+                                }
+                            );
+
+                            const data = response.status === 204
+                                ? {}
+                                : await response.json();
+
+                            if (!response.ok) {
+                                const messageContainer =
+                                    document.getElementById("message");
+
+                                if (messageContainer) {
+                                    messageContainer.textContent =
+                                        data.error ||
+                                        "Unable to delete reservation.";
+                                } else {
+                                    const message = document.createElement("p");
+
+                                    message.className = "message";
+                                    message.id = "message";
+                                    message.textContent =
+                                        data.error ||
+                                        "Unable to delete reservation.";
+
+                                    document
+                                        .querySelector("main")
+                                        .insertBefore(
+                                            message,
+                                            document.querySelector("h1")
+                                        );
+                                }
+
+                                return;
+                            }
+
+                            window.location.reload();
+
+                        } catch (error) {
+                            let messageContainer =
+                                document.getElementById("message");
+
+                            if (!messageContainer) {
+                                messageContainer = document.createElement("p");
+                                messageContainer.className = "message";
+                                messageContainer.id = "message";
+
+                                document
+                                    .querySelector("main")
+                                    .insertBefore(
+                                        messageContainer,
+                                        document.querySelector("h1")
+                                    );
+                            }
+
+                            messageContainer.textContent =
+                                "Unable to delete reservation.";
+                        }
+                    });
+                });
+        </script>
+
+    </body>
+
 </html>

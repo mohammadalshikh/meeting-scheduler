@@ -51,7 +51,6 @@ class UserService:
         finally:
             connection.close()
 
-
     @staticmethod
     def get_all():
         connection = DbService.get_connection()
@@ -68,7 +67,6 @@ class UserService:
             return [dict(row) for row in rows]
         finally:
             connection.close()
-
 
     @staticmethod
     def create(username, email, password_hash, role="user"):

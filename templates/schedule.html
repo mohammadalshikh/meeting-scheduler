@@ -1,95 +1,450 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Schedule</title>
-    <link rel="stylesheet"
-          href="{{ url_for('static', filename='css/style.css') }}">
-</head>
 
-<body>
-<main class="container">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Room Schedule</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    </head>
 
-    <h1>Find a Meeting Room</h1>
+    <body>
+        <main class="container">
+            <p>
+                <a href="{{ url_for('web.index') }}">Back</a>
+            </p>
 
-    {% with messages = get_flashed_messages() %}
-        {% for message in messages %}
+            <h1>Meeting Room Schedule</h1>
+
+            {% with messages = get_flashed_messages() %}
+            {% for message in messages %}
             <p class="message">{{ message }}</p>
-        {% endfor %}
-    {% endwith %}
+            {% endfor %}
+            {% endwith %}
 
-    <form method="GET"
-          action="{{ url_for('web.available_rooms') }}">
+            <div class="day-navigation">
 
-        <label for="date">Date</label>
-        <input
-            id="date"
-            type="date"
-            name="date"
-            required
-        >
+                <a class="button {% if not previous_date %}disabled{% endif %}" {% if previous_date %}
+                    href="{{ url_for('web.schedule', date=previous_date) }}" {% endif %}>
+                    ← Previous Day
+                </a>
 
-        <label for="start">Start Time</label>
-        <input
-            id="start"
-            type="time"
-            name="start"
-            required
-        >
+                <strong>{{ selected_date }}</strong>
 
-        <label for="end">End Time</label>
-        <input
-            id="end"
-            type="time"
-            name="end"
-            required
-        >
-
-        <button type="submit">
-            Find Available Rooms
-        </button>
-
-    </form>
-
-    <hr>
-
-    <h2>Available Rooms</h2>
-
-    {% if rooms %}
-
-        {% for room in rooms %}
-
-            <div class="card">
-
-                <h3>{{ room.name }}</h3>
-
-                <p>
-                    Capacity: {{ room.capacity }}
-                </p>
-
-                <p>
-                    Location: {{ room.location or "N/A" }}
-                </p>
-
-                <p>
-                    {{ room.description or "No description." }}
-                </p>
+                <a class="button {% if not next_date %}disabled{% endif %}" {% if next_date %}
+                    href="{{ url_for('web.schedule', date=next_date) }}" {% endif %}>
+                    Next Day →
+                </a>
 
             </div>
 
-        {% endfor %}
+            <input id="selected-date" type="hidden" value="{{ selected_date_value }}">
 
-    {% else %}
+            <div id="error-message" class="message" style="display: none;">
+            </div>
 
-        <p>Choose a date and time to search for rooms.</p>
+            <form id="reservation-form">
 
-    {% endif %}
+                <label for="room_id">Room</label>
 
-    <p>
-        <a href="{{ url_for('web.index') }}">Back</a>
-    </p>
+                <select id="room_id" name="room_id" required>
+                    <option value="">Select a room</option>
 
-</main>
-</body>
+                    {% for room in rooms %}
+                    <option value="{{ room.id }}">
+                        {{ room.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+
+                <label for="start_time">Start Time</label>
+
+                <select id="start_time" name="start_time" required>
+                    <option value="">Select start time</option>
+                </select>
+
+                <label for="end_time">End Time</label>
+
+                <select id="end_time" name="end_time" required>
+                    <option value="">Select end time</option>
+                </select>
+
+                <label for="title">Meeting Title</label>
+
+                <input id="title" name="title" type="text" maxlength="150" placeholder="Team Meeting" required>
+
+                <button type="submit">
+                    Check Availability
+                </button>
+
+            </form>
+
+            <div id="pending-section" style="display: none;">
+
+                <p>
+                    <strong>Selected:</strong>
+                    <span id="pending-details"></span>
+                </p>
+
+                <button id="confirm-button" type="button">
+                    Confirm Reservation
+                </button>
+
+            </div>
+
+            <hr>
+
+            <section class="timeline">
+
+                <div class="timeline-hours">
+                    <span>9 AM</span>
+                    <span>10 AM</span>
+                    <span>11 AM</span>
+                    <span>12 PM</span>
+                    <span>1 PM</span>
+                    <span>2 PM</span>
+                    <span>3 PM</span>
+                    <span>4 PM</span>
+                    <span>5 PM</span>
+                    <span>6 PM</span>
+                    <span>7 PM</span>
+                    <span>8 PM</span>
+                    <span>9 PM</span>
+                </div>
+
+                {% for room in rooms %}
+
+                <div class="room-row">
+
+                    <div class="room-label">
+                        <strong>{{ room.name }}</strong>
+                        <small>{{ room.capacity }} seats</small>
+                    </div>
+
+                    <div class="timeline-track" data-room-id="{{ room.id }}">
+
+                        {% for reservation in room.reservations %}
+
+                        <div class="reservation-block booked" data-start="{{ reservation.start_time }}"
+                            data-end="{{ reservation.end_time }}" title="{{ reservation.title }}"></div>
+
+                        {% endfor %}
+
+                    </div>
+
+                </div>
+
+                {% endfor %}
+
+            </section>
+
+        </main>
+
+        <script>
+            const selectedDate =
+                document.getElementById("selected-date").value;
+
+            let pendingReservation = null;
+
+            const form = document.getElementById("reservation-form");
+            const roomSelect = document.getElementById("room_id");
+            const startSelect = document.getElementById("start_time");
+            const endSelect = document.getElementById("end_time");
+            const titleInput = document.getElementById("title");
+            const errorMessage = document.getElementById("error-message");
+            const pendingSection = document.getElementById("pending-section");
+            const pendingDetails = document.getElementById("pending-details");
+            const confirmButton = document.getElementById("confirm-button");
+
+            function showError(message) {
+                errorMessage.textContent = message;
+                errorMessage.style.display = "block";
+            }
+
+            function clearError() {
+                errorMessage.textContent = "";
+                errorMessage.style.display = "none";
+            }
+
+            function formatTime(hour, minute) {
+                return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+            }
+
+            function populateTimeOptions() {
+                const now = new Date();
+                const selected = new Date(`${selectedDate}T00:00:00`);
+
+                startSelect.innerHTML =
+                    '<option value="">Select start time</option>';
+
+                endSelect.innerHTML =
+                    '<option value="">Select end time</option>';
+
+                let firstHour = 9;
+
+                if (
+                    selected.getFullYear() === now.getFullYear() &&
+                    selected.getMonth() === now.getMonth() &&
+                    selected.getDate() === now.getDate()
+                ) {
+                    firstHour = now.getHours() + 1;
+                    firstHour = Math.max(firstHour, 9);
+                }
+
+                for (let hour = firstHour; hour <= 21; hour++) {
+
+                    for (const minute of [0, 30]) {
+
+                        if (hour === 21 && minute !== 0) {
+                            continue;
+                        }
+
+                        const value = formatTime(hour, minute);
+
+                        const startOption = document.createElement("option");
+                        startOption.value = value;
+                        startOption.textContent = value;
+                        startSelect.appendChild(startOption);
+
+                        const endOption = document.createElement("option");
+                        endOption.value = value;
+                        endOption.textContent = value;
+                        endSelect.appendChild(endOption);
+                    }
+                }
+            }
+
+            function renderTimeline() {
+                document.querySelectorAll(".timeline-track").forEach(track => {
+
+                    const blocks =
+                        track.querySelectorAll(".reservation-block.booked");
+
+                    blocks.forEach(block => {
+
+                        const start = new Date(block.dataset.start);
+                        const end = new Date(block.dataset.end);
+
+                        const startMinutes =
+                            start.getHours() * 60 +
+                            start.getMinutes() -
+                            540;
+
+                        const endMinutes =
+                            end.getHours() * 60 +
+                            end.getMinutes() -
+                            540;
+
+                        block.style.left =
+                            `${(startMinutes / 720) * 100}%`;
+
+                        block.style.width =
+                            `${((endMinutes - startMinutes) / 720) * 100}%`;
+                    });
+                });
+            }
+
+            function clearPending() {
+                const pendingBlock =
+                    document.querySelector(".reservation-block.pending");
+
+                if (pendingBlock) {
+                    pendingBlock.remove();
+                }
+
+                pendingSection.style.display = "none";
+                pendingReservation = null;
+            }
+
+            function showPending() {
+                const pendingBlock =
+                    document.querySelector(".reservation-block.pending");
+
+                if (pendingBlock) {
+                    pendingBlock.remove();
+                }
+
+                const track = document.querySelector(
+                    `.timeline-track[data-room-id="${pendingReservation.room_id}"]`
+                );
+
+                if (!track) {
+                    return;
+                }
+
+                const [startHour, startMinute] =
+                    pendingReservation.start_time.split(":").map(Number);
+
+                const [endHour, endMinute] =
+                    pendingReservation.end_time.split(":").map(Number);
+
+                const startMinutes =
+                    startHour * 60 +
+                    startMinute -
+                    540;
+
+                const endMinutes =
+                    endHour * 60 +
+                    endMinute -
+                    540;
+
+                const block = document.createElement("div");
+
+                block.className = "reservation-block pending";
+
+                block.style.left =
+                    `${(startMinutes / 720) * 100}%`;
+
+                block.style.width =
+                    `${((endMinutes - startMinutes) / 720) * 100}%`;
+
+                track.appendChild(block);
+
+                const roomName =
+                    roomSelect.options[roomSelect.selectedIndex].text;
+
+                pendingDetails.textContent =
+                    `${roomName} — ${pendingReservation.start_time} to ${pendingReservation.end_time}`;
+
+                pendingSection.style.display = "block";
+            }
+            form.addEventListener("submit", async event => {
+
+                event.preventDefault();
+
+                clearError();
+                clearPending();
+
+                const roomId = Number(roomSelect.value);
+                const start = startSelect.value;
+                const end = endSelect.value;
+                const title = titleInput.value.trim();
+
+                if (!roomId || !start || !end || !title) {
+                    showError("Please complete all reservation fields.");
+                    return;
+                }
+
+                const startTime =
+                    `${selectedDate}T${start}:00`;
+
+                const endTime =
+                    `${selectedDate}T${end}:00`;
+
+                try {
+
+                    const response = await fetch(
+                        "/api/reservations/validate",
+                        {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify({
+                                room_id: roomId,
+                                start_time: startTime,
+                                end_time: endTime
+                            })
+                        }
+                    );
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        showError(
+                            data.error ||
+                            "Reservation is not valid."
+                        );
+                        return;
+                    }
+
+                    pendingReservation = {
+                        room_id: roomId,
+                        start_time: start,
+                        end_time: end,
+                        title: title
+                    };
+
+                    showPending();
+
+                } catch (error) {
+                    console.error(error);
+                    showError(error.message);
+                }
+            });
+
+            confirmButton.addEventListener("click", async () => {
+
+                if (!pendingReservation) {
+                    return;
+                }
+
+                clearError();
+
+                try {
+
+                    const response = await fetch(
+                        "/api/reservations",
+                        {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify({
+                                room_id: pendingReservation.room_id,
+                                title: pendingReservation.title,
+                                start_time:
+                                    `${selectedDate}T${pendingReservation.start_time}:00`,
+                                end_time:
+                                    `${selectedDate}T${pendingReservation.end_time}:00`
+                            })
+                        }
+                    );
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        showError(
+                            data.error ||
+                            "Reservation could not be created."
+                        );
+                        return;
+                    }
+
+                    window.location.href =
+                        `{{ url_for('web.schedule') }}?date=${selectedDate}`;
+
+                } catch (error) {
+                    showError(
+                        "Unable to create reservation."
+                    );
+                }
+            });
+
+            roomSelect.addEventListener(
+                "change",
+                clearPending
+            );
+
+            startSelect.addEventListener(
+                "change",
+                clearPending
+            );
+
+            endSelect.addEventListener(
+                "change",
+                clearPending
+            );
+
+            titleInput.addEventListener(
+                "input",
+                clearPending
+            );
+
+            populateTimeOptions();
+            renderTimeline();
+        </script>
+
+    </body>
+
 </html>

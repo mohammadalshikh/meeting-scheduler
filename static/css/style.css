@@ -2,12 +2,13 @@ body {
     margin: 0;
     font-family: Arial, sans-serif;
     background: #f5f5f5;
+    color: #222;
 }
 
 .container {
-    max-width: 800px;
-    margin: 60px auto;
-    padding: 40px;
+    max-width: 1000px;
+    margin: 40px auto;
+    padding: 30px;
     background: white;
     border-radius: 8px;
 }
@@ -20,9 +21,11 @@ form {
 }
 
 input,
+select,
 button {
     padding: 10px;
     font-size: 16px;
+    box-sizing: border-box;
 }
 
 button,
@@ -53,4 +56,128 @@ button,
     padding: 15px;
     border: 1px solid #ddd;
     border-radius: 5px;
+}
+
+.home-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 25px;
+}
+
+.action-row {
+    display: flex;
+    gap: 10px;
+    min-height: 42px;
+}
+
+.day-navigation {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    margin: 20px 0;
+}
+
+.day-navigation strong {
+    text-align: center;
+}
+
+.day-navigation .button:first-child {
+    justify-self: start;
+}
+
+.day-navigation .button:last-child {
+    justify-self: end;
+}
+
+.day-navigation .disabled {
+    background: #ccc;
+    color: #777;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.timeline {
+    margin-top: 30px;
+    overflow-x: auto;
+}
+
+.timeline-hours {
+    margin-left: 150px;
+    min-width: 720px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #666;
+}
+
+.timeline-hours span {
+    transform: translateX(-50%);
+    white-space: nowrap;
+}
+
+.room-row {
+    display: flex;
+    margin: 12px 0;
+    min-width: 870px;
+}
+
+.room-label {
+    width: 140px;
+    flex-shrink: 0;
+    padding: 10px 10px 0 0;
+    box-sizing: border-box;
+}
+
+.room-label small {
+    display: block;
+    margin-top: 4px;
+    color: #666;
+}
+
+.timeline-track {
+    position: relative;
+    height: 42px;
+    min-width: 720px;
+    flex: 1;
+    background:
+        repeating-linear-gradient(to right,
+            #fff 0,
+            #fff calc(8.333% - 1px),
+            #ddd calc(8.333% - 1px),
+            #ddd 8.333%);
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.reservation-block {
+    position: absolute;
+    top: 3px;
+    bottom: 3px;
+    border-radius: 4px;
+}
+
+.reservation-block.booked {
+    background: #d9534f;
+}
+
+.reservation-block.pending {
+    background: #f0ad4e;
+}
+
+#pending-section {
+    margin: 15px 0;
+    padding: 15px;
+    border: 1px solid #f0ad4e;
+    border-radius: 5px;
+    background: #fff8ed;
+}
+
+#error-message {
+    margin: 15px 0;
+}
+
+a {
+    color: inherit;
 }
