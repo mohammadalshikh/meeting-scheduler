@@ -10,9 +10,9 @@
 
     <body>
 
-        <main class="container">
+        <main class="container auth">
 
-            <a href="{{ url_for('web.index') }}">
+            <a href="{{ url_for('web.index') }}" class="back-link">
                 Back
             </a>
 
@@ -22,15 +22,21 @@
 
             <form id="register-form">
 
-                <label for="username">Username</label>
+                <label for="username">
+                    Username
+                </label>
 
                 <input id="username" type="text" name="username" maxlength="50" required>
 
-                <label for="email">Email</label>
+                <label for="email">
+                    Email
+                </label>
 
                 <input id="email" type="email" name="email" maxlength="255" required>
 
-                <label for="password">Password</label>
+                <label for="password">
+                    Password
+                </label>
 
                 <input id="password" type="password" name="password" minlength="8" required>
 

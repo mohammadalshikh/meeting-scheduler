@@ -9,6 +9,7 @@
     </head>
 
     <body>
+
         <main class="container">
 
             <h1>Confirm Reservation</h1>
@@ -23,22 +24,35 @@
 
                 <h2>{{ room.name }}</h2>
 
-                <p><strong>Date:</strong> {{ date }}</p>
-                <p><strong>Time:</strong> {{ start }} - {{ end }}</p>
-                <p><strong>Capacity:</strong> {{ room.capacity }}</p>
-                <p><strong>Location:</strong> {{ room.location or "N/A" }}</p>
+                <p>
+                    <strong>Date:</strong> {{ date }}
+                </p>
+
+                <p>
+                    <strong>Time:</strong> {{ start }} - {{ end }}
+                </p>
+
+                <p>
+                    <strong>Capacity:</strong> {{ room.capacity }}
+                </p>
+
+                <p>
+                    <strong>Location:</strong> {{ room.location or "N/A" }}
+                </p>
 
             </div>
 
             <form method="POST" action="{{ url_for(
-              'web.confirm_reservation',
-              room_id=room.id,
-              date=date,
-              start=start,
-              end=end
-          ) }}">
+            'web.confirm_reservation',
+            room_id=room.id,
+            date=date,
+            start=start,
+            end=end
+        ) }}">
 
-                <label for="title">Meeting Title</label>
+                <label for="title">
+                    Meeting Title
+                </label>
 
                 <input id="title" type="text" name="title" maxlength="150" placeholder="Team Meeting" required
                     autofocus>
@@ -49,11 +63,12 @@
 
             </form>
 
-            <a href="{{ url_for('web.schedule') }}">
+            <a href="{{ url_for('web.schedule') }}" class="back-link">
                 Cancel
             </a>
 
         </main>
+
     </body>
 
 </html>

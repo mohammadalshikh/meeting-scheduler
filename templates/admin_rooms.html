@@ -12,7 +12,7 @@
 
         <main class="container">
 
-            <a href="{{ url_for('web.index') }}">
+            <a href="{{ url_for('web.index') }}" class="back-link">
                 Back
             </a>
 
@@ -20,39 +20,55 @@
 
             <div id="message"></div>
 
-            <h2>Add Room</h2>
+            <button type="button" id="show-create-room">
+                Create Room
+            </button>
 
-            <form id="create-room-form">
+            <section class="admin-section" id="create-room-section" style="display: none;">
 
-                <label for="create-name">
-                    Name
-                </label>
+                <h2>Add Room</h2>
 
-                <input id="create-name" type="text" maxlength="100" required>
+                <form id="create-room-form">
 
-                <label for="create-capacity">
-                    Capacity
-                </label>
+                    <label for="create-name">
+                        Name
+                    </label>
 
-                <input id="create-capacity" type="number" min="1" required>
+                    <input id="create-name" type="text" maxlength="100" required>
 
-                <label for="create-location">
-                    Location
-                </label>
+                    <label for="create-capacity">
+                        Capacity
+                    </label>
 
-                <input id="create-location" type="text" maxlength="255">
+                    <input id="create-capacity" type="number" min="1" required>
 
-                <label for="create-description">
-                    Description
-                </label>
+                    <label for="create-location">
+                        Location
+                    </label>
 
-                <input id="create-description" type="text" maxlength="500">
+                    <input id="create-location" type="text" maxlength="255">
 
-                <button type="submit">
-                    Create Room
-                </button>
+                    <label for="create-description">
+                        Description
+                    </label>
 
-            </form>
+                    <input id="create-description" type="text" maxlength="500">
+
+                    <div class="edit-actions">
+
+                        <button type="submit">
+                            Save Room
+                        </button>
+
+                        <button type="button" id="cancel-create-room">
+                            Cancel
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </section>
 
             {% if rooms %}
 
@@ -155,7 +171,9 @@
 
             {% else %}
 
-            <p>No rooms found.</p>
+            <p class="message">
+                No rooms found.
+            </p>
 
             {% endif %}
 
@@ -168,6 +186,25 @@
                 message.className = "message";
                 message.textContent = text;
             }
+
+            const createRoomSection =
+                document.getElementById("create-room-section");
+
+            const showCreateRoomButton =
+                document.getElementById("show-create-room");
+
+            const cancelCreateRoomButton =
+                document.getElementById("cancel-create-room");
+
+            showCreateRoomButton.addEventListener("click", () => {
+                createRoomSection.style.display = "block";
+                showCreateRoomButton.style.display = "none";
+            });
+
+            cancelCreateRoomButton.addEventListener("click", () => {
+                createRoomSection.style.display = "none";
+                showCreateRoomButton.style.display = "inline-flex";
+            });
 
             function setEditing(roomId, editing) {
                 const editButton = document.querySelector(
@@ -186,12 +223,12 @@
 
                 if (editButton) {
                     editButton.style.display =
-                        editing ? "none" : "inline-block";
+                        editing ? "none" : "inline-flex";
                 }
 
                 if (deleteButton) {
                     deleteButton.style.display =
-                        editing ? "none" : "inline-block";
+                        editing ? "none" : "inline-flex";
                 }
             }
 
@@ -200,55 +237,36 @@
                 .addEventListener("submit", async function (event) {
                     event.preventDefault();
 
-                    const name = document.getElementById(
-                        "create-name"
-                    ).value.trim();
-
-                    const capacity = document.getElementById(
-                        "create-capacity"
-                    ).value;
-
-                    const location = document.getElementById(
-                        "create-location"
-                    ).value.trim();
-
-                    const description = document.getElementById(
-                        "create-description"
-                    ).value.trim();
+                    const name = document.getElementById("create-name").value.trim();
+                    const capacity = document.getElementById("create-capacity").value;
+                    const location = document.getElementById("create-location").value.trim();
+                    const description = document.getElementById("create-description").value.trim();
 
                     try {
-                        const response = await fetch(
-                            "/api/rooms",
-                            {
-                                method: "POST",
-                                headers: {
-                                    "Content-Type": "application/json"
-                                },
-                                body: JSON.stringify({
-                                    name: name,
-                                    capacity: Number(capacity),
-                                    location: location,
-                                    description: description
-                                })
-                            }
-                        );
+                        const response = await fetch("/api/rooms", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify({
+                                name,
+                                capacity: Number(capacity),
+                                location,
+                                description
+                            })
+                        });
 
                         const data = await response.json();
 
                         if (!response.ok) {
-                            showMessage(
-                                data.error ||
-                                "Unable to create room."
-                            );
+                            showMessage(data.error || "Unable to create room.");
                             return;
                         }
 
                         window.location.reload();
 
                     } catch (error) {
-                        showMessage(
-                            "Unable to create room."
-                        );
+                        showMessage("Unable to create room.");
                     }
                 });
 
@@ -256,10 +274,7 @@
                 .querySelectorAll(".edit-room")
                 .forEach(button => {
                     button.addEventListener("click", function () {
-                        setEditing(
-                            this.dataset.roomId,
-                            true
-                        );
+                        setEditing(this.dataset.roomId, true);
                     });
                 });
 
@@ -267,10 +282,7 @@
                 .querySelectorAll(".cancel-room-edit")
                 .forEach(button => {
                     button.addEventListener("click", function () {
-                        setEditing(
-                            this.dataset.roomId,
-                            false
-                        );
+                        setEditing(this.dataset.roomId, false);
                     });
                 });
 
@@ -280,68 +292,38 @@
                     button.addEventListener("click", async function () {
                         const roomId = this.dataset.roomId;
 
-                        const name = document.getElementById(
-                            "name-" + roomId
-                        ).value.trim();
-
-                        const capacity = document.getElementById(
-                            "capacity-" + roomId
-                        ).value;
-
-                        const location = document.getElementById(
-                            "location-" + roomId
-                        ).value.trim();
-
-                        const description = document.getElementById(
-                            "description-" + roomId
-                        ).value.trim();
-
-                        const active =
-                            document.getElementById(
-                                "active-" + roomId
-                            ).value === "true";
-
-                        if (!name || !capacity) {
-                            showMessage(
-                                "Name and capacity are required."
-                            );
-                            return;
-                        }
+                        const name = document.getElementById("name-" + roomId).value.trim();
+                        const capacity = document.getElementById("capacity-" + roomId).value;
+                        const location = document.getElementById("location-" + roomId).value.trim();
+                        const description = document.getElementById("description-" + roomId).value.trim();
+                        const active = document.getElementById("active-" + roomId).value === "true";
 
                         try {
-                            const response = await fetch(
-                                "/api/rooms/" + roomId,
-                                {
-                                    method: "PUT",
-                                    headers: {
-                                        "Content-Type": "application/json"
-                                    },
-                                    body: JSON.stringify({
-                                        name: name,
-                                        capacity: Number(capacity),
-                                        location: location,
-                                        description: description,
-                                        active: active
-                                    })
-                                }
-                            );
+                            const response = await fetch("/api/rooms/" + roomId, {
+                                method: "PUT",
+                                headers: {
+                                    "Content-Type": "application/json"
+                                },
+                                body: JSON.stringify({
+                                    name,
+                                    capacity: Number(capacity),
+                                    location,
+                                    description,
+                                    active
+                                })
+                            });
 
                             const data = await response.json();
 
                             if (!response.ok) {
-                                showMessage(
-                                    data.error ||
-                                    "Unable to update room."
-                                );
+                                showMessage(data.error || "Unable to update room.");
                                 return;
                             }
 
                             window.location.reload();
 
                         } catch (error) {
-                            showMessage(
-                                "Unable to update room."
-                            );
+                            showMessage("Unable to update room.");
                         }
                     });
                 });
@@ -353,19 +335,15 @@
                         const roomId = this.dataset.roomId;
 
                         try {
-                            const response = await fetch(
-                                "/api/rooms/" + roomId,
-                                {
-                                    method: "DELETE"
-                                }
-                            );
+                            const response = await fetch("/api/rooms/" + roomId, {
+                                method: "DELETE"
+                            });
 
                             if (!response.ok) {
                                 const data = await response.json();
 
                                 showMessage(
-                                    data.error ||
-                                    "Unable to delete room."
+                                    data.error || "Unable to delete room."
                                 );
 
                                 return;
@@ -374,9 +352,7 @@
                             window.location.reload();
 
                         } catch (error) {
-                            showMessage(
-                                "Unable to delete room."
-                            );
+                            showMessage("Unable to delete room.");
                         }
                     });
                 });

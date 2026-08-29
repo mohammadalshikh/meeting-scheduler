@@ -12,7 +12,7 @@
 
         <main class="container">
 
-            <a href="{{ url_for('web.index') }}">
+            <a href="{{ url_for('web.index') }}" class="back-link">
                 Back
             </a>
 
@@ -59,7 +59,7 @@
                     {{ reservation.status }}
                 </p>
 
-                <div class="reservation-actions">
+                <div class="card-actions">
 
                     <button type="button" class="edit-reservation" data-reservation-id="{{ reservation.id }}"
                         data-room-id="{{ reservation.room_id }}">
@@ -164,12 +164,12 @@
 
                 if (editButton) {
                     editButton.style.display =
-                        editing ? "none" : "inline-block";
+                        editing ? "none" : "inline-flex";
                 }
 
                 if (deleteButton) {
                     deleteButton.style.display =
-                        editing ? "none" : "inline-block";
+                        editing ? "none" : "inline-flex";
                 }
             }
 

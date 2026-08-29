@@ -12,7 +12,7 @@
 
         <main class="container">
 
-            <a href="{{ url_for('web.index') }}">
+            <a href="{{ url_for('web.index') }}" class="back-link">
                 Back
             </a>
 
@@ -93,7 +93,9 @@
 
             {% else %}
 
-            <p>No users found.</p>
+            <p class="message">
+                No users found.
+            </p>
 
             {% endif %}
 
@@ -124,12 +126,12 @@
 
                 if (editButton) {
                     editButton.style.display =
-                        editing ? "none" : "inline-block";
+                        editing ? "none" : "inline-flex";
                 }
 
                 if (deleteButton) {
                     deleteButton.style.display =
-                        editing ? "none" : "inline-block";
+                        editing ? "none" : "inline-flex";
                 }
             }
 
@@ -137,10 +139,7 @@
                 .querySelectorAll(".edit-user")
                 .forEach(button => {
                     button.addEventListener("click", function () {
-                        setEditing(
-                            this.dataset.userId,
-                            true
-                        );
+                        setEditing(this.dataset.userId, true);
                     });
                 });
 
@@ -148,10 +147,7 @@
                 .querySelectorAll(".cancel-user-edit")
                 .forEach(button => {
                     button.addEventListener("click", function () {
-                        setEditing(
-                            this.dataset.userId,
-                            false
-                        );
+                        setEditing(this.dataset.userId, false);
                     });
                 });
 
@@ -170,9 +166,7 @@
                         ).value.trim();
 
                         if (!username || !email) {
-                            showMessage(
-                                "Username and email are required."
-                            );
+                            showMessage("Username and email are required.");
                             return;
                         }
 

@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="en">
 
     <head>
@@ -13,11 +12,9 @@
 
         <main class="container">
 
-            <p>
-                <a href="{{ url_for('web.index') }}">
-                    Back
-                </a>
-            </p>
+            <a href="{{ url_for('web.index') }}" class="back-link">
+                Back
+            </a>
 
             <h1>My Reservations</h1>
 
@@ -31,47 +28,53 @@
 
             {% if reservations %}
 
-            {% for reservation in reservations %}
+            <div class="reservation-list">
 
-            <div class="card">
+                {% for reservation in reservations %}
 
-                <h2>{{ reservation.title }}</h2>
+                <div class="card">
 
-                <p>
-                    <strong>Room:</strong>
-                    {{ reservation.room_name }}
-                </p>
+                    <h2>{{ reservation.title }}</h2>
 
-                <p>
-                    <strong>Start:</strong>
-                    {{ reservation.start_time.strftime("%b %-d, %Y %-I:%M %p") }}
-                </p>
+                    <p>
+                        <strong>Room:</strong>
+                        {{ reservation.room_name }}
+                    </p>
 
-                <p>
-                    <strong>End:</strong>
-                    {{ reservation.end_time.strftime("%b %-d, %Y %-I:%M %p") }}
-                </p>
+                    <p>
+                        <strong>Start:</strong>
+                        {{ reservation.start_time.strftime("%b %-d, %Y %-I:%M %p") }}
+                    </p>
 
-                <p>
-                    <strong>Status:</strong>
-                    {{ reservation.status }}
-                </p>
+                    <p>
+                        <strong>End:</strong>
+                        {{ reservation.end_time.strftime("%b %-d, %Y %-I:%M %p") }}
+                    </p>
 
-                {% if reservation.status == "confirmed" %}
+                    <p>
+                        <strong>Status:</strong>
+                        {{ reservation.status }}
+                    </p>
 
-                <button type="button" class="delete-reservation" data-reservation-id="{{ reservation.id }}">
-                    Delete Reservation
-                </button>
+                    {% if reservation.status == "confirmed" %}
 
-                {% endif %}
+                    <button type="button" class="delete-reservation" data-reservation-id="{{ reservation.id }}">
+                        Delete Reservation
+                    </button>
+
+                    {% endif %}
+
+                </div>
+
+                {% endfor %}
 
             </div>
 
-            {% endfor %}
-
             {% else %}
 
-            <p>You have no reservations.</p>
+            <p class="message">
+                You have no reservations.
+            </p>
 
             {% endif %}
 
@@ -89,8 +92,7 @@
                 .querySelectorAll(".delete-reservation")
                 .forEach(button => {
                     button.addEventListener("click", async function () {
-                        const reservationId =
-                            this.dataset.reservationId;
+                        const reservationId = this.dataset.reservationId;
 
                         try {
                             const response = await fetch(
@@ -101,8 +103,7 @@
                             );
 
                             if (!response.ok) {
-                                const data =
-                                    await response.json();
+                                const data = await response.json();
 
                                 showMessage(
                                     data.error ||

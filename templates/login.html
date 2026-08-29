@@ -10,9 +10,9 @@
 
     <body>
 
-        <main class="container">
+        <main class="container auth">
 
-            <a href="{{ url_for('web.index') }}">
+            <a href="{{ url_for('web.index') }}" class="back-link">
                 Back
             </a>
 
@@ -22,11 +22,15 @@
 
             <form id="login-form">
 
-                <label for="username">Username</label>
+                <label for="username">
+                    Username
+                </label>
 
                 <input id="username" type="text" name="username" required autofocus>
 
-                <label for="password">Password</label>
+                <label for="password">
+                    Password
+                </label>
 
                 <input id="password" type="password" name="password" required>
 

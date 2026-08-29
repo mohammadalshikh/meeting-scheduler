@@ -9,10 +9,12 @@
     </head>
 
     <body>
+
         <main class="container">
-            <p>
-                <a href="{{ url_for('web.index') }}">Back</a>
-            </p>
+
+            <a href="{{ url_for('web.index') }}" class="back-link">
+                Back
+            </a>
 
             <h1>Meeting Room Schedule</h1>
 
@@ -40,15 +42,18 @@
 
             <input id="selected-date" type="hidden" value="{{ selected_date_value }}">
 
-            <div id="error-message" class="message" style="display: none;">
-            </div>
+            <div id="error-message" class="message" style="display: none;"></div>
 
             <form id="reservation-form">
 
-                <label for="room_id">Room</label>
+                <label for="room_id">
+                    Room
+                </label>
 
                 <select id="room_id" name="room_id" required>
-                    <option value="">Select a room</option>
+                    <option value="">
+                        Select a room
+                    </option>
 
                     {% for room in rooms %}
                     <option value="{{ room.id }}">
@@ -57,19 +62,29 @@
                     {% endfor %}
                 </select>
 
-                <label for="start_time">Start Time</label>
+                <label for="start_time">
+                    Start Time
+                </label>
 
                 <select id="start_time" name="start_time" required>
-                    <option value="">Select start time</option>
+                    <option value="">
+                        Select start time
+                    </option>
                 </select>
 
-                <label for="end_time">End Time</label>
+                <label for="end_time">
+                    End Time
+                </label>
 
                 <select id="end_time" name="end_time" required>
-                    <option value="">Select end time</option>
+                    <option value="">
+                        Select end time
+                    </option>
                 </select>
 
-                <label for="title">Meeting Title</label>
+                <label for="title">
+                    Meeting Title
+                </label>
 
                 <input id="title" name="title" type="text" maxlength="150" placeholder="Team Meeting" required>
 
@@ -126,7 +141,8 @@
                         {% for reservation in room.reservations %}
 
                         <div class="reservation-block booked" data-start="{{ reservation.start_time }}"
-                            data-end="{{ reservation.end_time }}" title="{{ reservation.title }}"></div>
+                            data-end="{{ reservation.end_time }}" title="{{ reservation.title }}">
+                        </div>
 
                         {% endfor %}
 
@@ -187,12 +203,10 @@
                     selected.getMonth() === now.getMonth() &&
                     selected.getDate() === now.getDate()
                 ) {
-                    firstHour = now.getHours() + 1;
-                    firstHour = Math.max(firstHour, 9);
+                    firstHour = Math.max(now.getHours() + 1, 9);
                 }
 
                 for (let hour = firstHour; hour <= 21; hour++) {
-
                     for (const minute of [0, 30]) {
 
                         if (hour === 21 && minute !== 0) {
@@ -217,52 +231,42 @@
             function renderTimeline() {
                 document.querySelectorAll(".timeline-track").forEach(track => {
 
-                    const blocks =
-                        track.querySelectorAll(".reservation-block.booked");
+                    track.querySelectorAll(".reservation-block.booked")
+                        .forEach(block => {
 
-                    blocks.forEach(block => {
+                            const start = new Date(block.dataset.start);
+                            const end = new Date(block.dataset.end);
 
-                        const start = new Date(block.dataset.start);
-                        const end = new Date(block.dataset.end);
+                            const startMinutes =
+                                start.getHours() * 60 +
+                                start.getMinutes() - 540;
 
-                        const startMinutes =
-                            start.getHours() * 60 +
-                            start.getMinutes() -
-                            540;
+                            const endMinutes =
+                                end.getHours() * 60 +
+                                end.getMinutes() - 540;
 
-                        const endMinutes =
-                            end.getHours() * 60 +
-                            end.getMinutes() -
-                            540;
+                            block.style.left =
+                                `${(startMinutes / 720) * 100}%`;
 
-                        block.style.left =
-                            `${(startMinutes / 720) * 100}%`;
-
-                        block.style.width =
-                            `${((endMinutes - startMinutes) / 720) * 100}%`;
-                    });
+                            block.style.width =
+                                `${((endMinutes - startMinutes) / 720) * 100}%`;
+                        });
                 });
             }
 
             function clearPending() {
-                const pendingBlock =
-                    document.querySelector(".reservation-block.pending");
-
-                if (pendingBlock) {
-                    pendingBlock.remove();
-                }
+                document
+                    .querySelector(".reservation-block.pending")
+                    ?.remove();
 
                 pendingSection.style.display = "none";
                 pendingReservation = null;
             }
 
             function showPending() {
-                const pendingBlock =
-                    document.querySelector(".reservation-block.pending");
-
-                if (pendingBlock) {
-                    pendingBlock.remove();
-                }
+                document
+                    .querySelector(".reservation-block.pending")
+                    ?.remove();
 
                 const track = document.querySelector(
                     `.timeline-track[data-room-id="${pendingReservation.room_id}"]`
@@ -279,24 +283,16 @@
                     pendingReservation.end_time.split(":").map(Number);
 
                 const startMinutes =
-                    startHour * 60 +
-                    startMinute -
-                    540;
+                    startHour * 60 + startMinute - 540;
 
                 const endMinutes =
-                    endHour * 60 +
-                    endMinute -
-                    540;
+                    endHour * 60 + endMinute - 540;
 
                 const block = document.createElement("div");
 
                 block.className = "reservation-block pending";
-
-                block.style.left =
-                    `${(startMinutes / 720) * 100}%`;
-
-                block.style.width =
-                    `${((endMinutes - startMinutes) / 720) * 100}%`;
+                block.style.left = `${(startMinutes / 720) * 100}%`;
+                block.style.width = `${((endMinutes - startMinutes) / 720) * 100}%`;
 
                 track.appendChild(block);
 
@@ -308,8 +304,8 @@
 
                 pendingSection.style.display = "block";
             }
-            form.addEventListener("submit", async event => {
 
+            form.addEventListener("submit", async event => {
                 event.preventDefault();
 
                 clearError();
@@ -325,36 +321,23 @@
                     return;
                 }
 
-                const startTime =
-                    `${selectedDate}T${start}:00`;
-
-                const endTime =
-                    `${selectedDate}T${end}:00`;
-
                 try {
-
-                    const response = await fetch(
-                        "/api/reservations/validate",
-                        {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/json"
-                            },
-                            body: JSON.stringify({
-                                room_id: roomId,
-                                start_time: startTime,
-                                end_time: endTime
-                            })
-                        }
-                    );
+                    const response = await fetch("/api/reservations/validate", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            room_id: roomId,
+                            start_time: `${selectedDate}T${start}:00`,
+                            end_time: `${selectedDate}T${end}:00`
+                        })
+                    });
 
                     const data = await response.json();
 
                     if (!response.ok) {
-                        showError(
-                            data.error ||
-                            "Reservation is not valid."
-                        );
+                        showError(data.error || "Reservation is not valid.");
                         return;
                     }
 
@@ -368,7 +351,6 @@
                     showPending();
 
                 } catch (error) {
-                    console.error(error);
                     showError(error.message);
                 }
             });
@@ -379,35 +361,26 @@
                     return;
                 }
 
-                clearError();
-
                 try {
-
-                    const response = await fetch(
-                        "/api/reservations",
-                        {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/json"
-                            },
-                            body: JSON.stringify({
-                                room_id: pendingReservation.room_id,
-                                title: pendingReservation.title,
-                                start_time:
-                                    `${selectedDate}T${pendingReservation.start_time}:00`,
-                                end_time:
-                                    `${selectedDate}T${pendingReservation.end_time}:00`
-                            })
-                        }
-                    );
+                    const response = await fetch("/api/reservations", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            room_id: pendingReservation.room_id,
+                            title: pendingReservation.title,
+                            start_time:
+                                `${selectedDate}T${pendingReservation.start_time}:00`,
+                            end_time:
+                                `${selectedDate}T${pendingReservation.end_time}:00`
+                        })
+                    });
 
                     const data = await response.json();
 
                     if (!response.ok) {
-                        showError(
-                            data.error ||
-                            "Reservation could not be created."
-                        );
+                        showError(data.error || "Reservation could not be created.");
                         return;
                     }
 
@@ -415,31 +388,14 @@
                         `{{ url_for('web.schedule') }}?date=${selectedDate}`;
 
                 } catch (error) {
-                    showError(
-                        "Unable to create reservation."
-                    );
+                    showError("Unable to create reservation.");
                 }
             });
 
-            roomSelect.addEventListener(
-                "change",
-                clearPending
-            );
-
-            startSelect.addEventListener(
-                "change",
-                clearPending
-            );
-
-            endSelect.addEventListener(
-                "change",
-                clearPending
-            );
-
-            titleInput.addEventListener(
-                "input",
-                clearPending
-            );
+            roomSelect.addEventListener("change", clearPending);
+            startSelect.addEventListener("change", clearPending);
+            endSelect.addEventListener("change", clearPending);
+            titleInput.addEventListener("input", clearPending);
 
             populateTimeOptions();
             renderTimeline();
