@@ -226,24 +226,27 @@ def update_user(user_id):
 
     data = request.get_json(silent=True) or {}
 
-    required = ("username", "email", "role")
+    username = data.get("username", "").strip()
+    email = data.get("email", "").strip()
 
-    if any(field not in data for field in required):
-        return jsonify({"error": "username, email and role are required"}), 400
+    if not username or not email:
+        return jsonify({"error": "username and email are required"}), 400
 
-    if data["role"] not in ("user", "admin"):
-        return jsonify({"error": "Invalid role"}), 400
+    existing = UserService.get_by_id(user_id)
+
+    if existing is None:
+        return jsonify({"error": "User not found"}), 404
 
     try:
         user = UserService.update(
             user_id=user_id,
-            username=data["username"],
-            email=data["email"],
-            role=data["role"],
+            username=username,
+            email=email,
+            role=existing["role"],
             actor_id=session["user_id"],
         )
     except ValueError as error:
-        return jsonify({"error": str(error)}), 404
+        return jsonify({"error": str(error)}), 400
 
     return jsonify(clean_user(user)), 200
 
@@ -573,8 +576,9 @@ def delete_reservation(reservation_id):
 
     try:
         ReservationService.delete(
-            reservation_id,
-            session["user_id"],
+            reservation_id=reservation_id,
+            actor_id=session["user_id"],
+            actor_role=session["role"],
         )
     except ValueError as error:
         return jsonify({"error": str(error)}), 400

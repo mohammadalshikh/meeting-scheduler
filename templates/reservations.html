@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="en">
 
     <head>
@@ -19,6 +20,8 @@
             </p>
 
             <h1>My Reservations</h1>
+
+            <div id="message"></div>
 
             {% with messages = get_flashed_messages() %}
             {% for message in messages %}
@@ -41,12 +44,12 @@
 
                 <p>
                     <strong>Start:</strong>
-                    {{ reservation.start_time }}
+                    {{ reservation.start_time.strftime("%b %-d, %Y %-I:%M %p") }}
                 </p>
 
                 <p>
                     <strong>End:</strong>
-                    {{ reservation.end_time }}
+                    {{ reservation.end_time.strftime("%b %-d, %Y %-I:%M %p") }}
                 </p>
 
                 <p>
@@ -75,11 +78,19 @@
         </main>
 
         <script>
+            function showMessage(text) {
+                const message = document.getElementById("message");
+
+                message.className = "message";
+                message.textContent = text;
+            }
+
             document
                 .querySelectorAll(".delete-reservation")
                 .forEach(button => {
                     button.addEventListener("click", async function () {
-                        const reservationId = this.dataset.reservationId;
+                        const reservationId =
+                            this.dataset.reservationId;
 
                         try {
                             const response = await fetch(
@@ -90,9 +101,10 @@
                             );
 
                             if (!response.ok) {
-                                const data = await response.json();
+                                const data =
+                                    await response.json();
 
-                                alert(
+                                showMessage(
                                     data.error ||
                                     "Unable to delete reservation."
                                 );
@@ -103,7 +115,9 @@
                             window.location.reload();
 
                         } catch (error) {
-                            alert("Unable to delete reservation.");
+                            showMessage(
+                                "Unable to delete reservation."
+                            );
                         }
                     });
                 });

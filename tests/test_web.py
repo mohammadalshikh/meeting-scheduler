@@ -67,7 +67,7 @@ def test_schedule_page_is_public(client, monkeypatch):
     assert response.status_code == 200
 
 
-def test_schedule_rejects_date_before_today(client, monkeypatch):
+def test_schedule_accepts_date_before_today(client, monkeypatch):
     monkeypatch.setattr(
         "controllers.web.RoomService.get_daily_schedule",
         lambda selected_date: [],
@@ -78,7 +78,7 @@ def test_schedule_rejects_date_before_today(client, monkeypatch):
     assert response.status_code == 200
 
 
-def test_schedule_rejects_date_beyond_booking_window(client, monkeypatch):
+def test_schedule_accepts_date_beyond_booking_window(client, monkeypatch):
     monkeypatch.setattr(
         "controllers.web.RoomService.get_daily_schedule",
         lambda selected_date: [],
@@ -96,7 +96,10 @@ def test_reservations_requires_login(client):
     assert "/login" in response.headers["Location"]
 
 
-def test_reservations_page_loads_for_logged_in_user(client, monkeypatch):
+def test_reservations_page_loads_for_logged_in_user(
+    client,
+    monkeypatch,
+):
     login(client)
 
     monkeypatch.setattr(
@@ -147,5 +150,26 @@ def test_admin_can_access_admin_reservations(client, monkeypatch):
     )
 
     response = client.get("/admin/reservations")
+
+    assert response.status_code == 200
+
+
+def test_normal_user_cannot_access_admin_rooms(client):
+    login(client, role="user")
+
+    response = client.get("/admin/rooms")
+
+    assert response.status_code == 403
+
+
+def test_admin_can_access_admin_rooms(client, monkeypatch):
+    login(client, role="admin")
+
+    monkeypatch.setattr(
+        "controllers.web.RoomService.get_all",
+        lambda active_only=False: [],
+    )
+
+    response = client.get("/admin/rooms")
 
     assert response.status_code == 200

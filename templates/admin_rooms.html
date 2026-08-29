@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Manage Rooms</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    </head>
+
+    <body>
+
+        <main class="container">
+
+            <a href="{{ url_for('web.index') }}">
+                Back
+            </a>
+
+            <h1>Manage Rooms</h1>
+
+            <div id="message"></div>
+
+            <h2>Add Room</h2>
+
+            <form id="create-room-form">
+
+                <label for="create-name">
+                    Name
+                </label>
+
+                <input id="create-name" type="text" maxlength="100" required>
+
+                <label for="create-capacity">
+                    Capacity
+                </label>
+
+                <input id="create-capacity" type="number" min="1" required>
+
+                <label for="create-location">
+                    Location
+                </label>
+
+                <input id="create-location" type="text" maxlength="255">
+
+                <label for="create-description">
+                    Description
+                </label>
+
+                <input id="create-description" type="text" maxlength="500">
+
+                <button type="submit">
+                    Create Room
+                </button>
+
+            </form>
+
+            {% if rooms %}
+
+            {% for room in rooms %}
+
+            <div class="card">
+
+                <h3>{{ room.name }}</h3>
+
+                <p>
+                    <strong>Capacity:</strong>
+                    {{ room.capacity }}
+                </p>
+
+                <p>
+                    <strong>Location:</strong>
+                    {{ room.location or "—" }}
+                </p>
+
+                <p>
+                    <strong>Description:</strong>
+                    {{ room.description or "—" }}
+                </p>
+
+                <p>
+                    <strong>Status:</strong>
+                    {{ "Active" if room.active else "Inactive" }}
+                </p>
+
+                <div class="room-actions">
+
+                    <button type="button" class="edit-room" data-room-id="{{ room.id }}">
+                        Edit
+                    </button>
+
+                    <button type="button" class="delete-room" data-room-id="{{ room.id }}">
+                        Delete
+                    </button>
+
+                </div>
+
+                <form id="edit-form-{{ room.id }}" class="room-edit-form" style="display: none;">
+
+                    <label for="name-{{ room.id }}">
+                        Name
+                    </label>
+
+                    <input id="name-{{ room.id }}" type="text" value="{{ room.name }}" maxlength="100" required>
+
+                    <label for="capacity-{{ room.id }}">
+                        Capacity
+                    </label>
+
+                    <input id="capacity-{{ room.id }}" type="number" value="{{ room.capacity }}" min="1" required>
+
+                    <label for="location-{{ room.id }}">
+                        Location
+                    </label>
+
+                    <input id="location-{{ room.id }}" type="text" value="{{ room.location or '' }}" maxlength="255">
+
+                    <label for="description-{{ room.id }}">
+                        Description
+                    </label>
+
+                    <input id="description-{{ room.id }}" type="text" value="{{ room.description or '' }}"
+                        maxlength="500">
+
+                    <label for="active-{{ room.id }}">
+                        Status
+                    </label>
+
+                    <select id="active-{{ room.id }}">
+                        <option value="true" {% if room.active %}selected{% endif %}>
+                            Active
+                        </option>
+
+                        <option value="false" {% if not room.active %}selected{% endif %}>
+                            Inactive
+                        </option>
+                    </select>
+
+                    <div class="edit-actions">
+
+                        <button type="button" class="save-room" data-room-id="{{ room.id }}">
+                            Save
+                        </button>
+
+                        <button type="button" class="cancel-room-edit" data-room-id="{{ room.id }}">
+                            Cancel
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </div>
+
+            {% endfor %}
+
+            {% else %}
+
+            <p>No rooms found.</p>
+
+            {% endif %}
+
+        </main>
+
+        <script>
+            function showMessage(text) {
+                const message = document.getElementById("message");
+
+                message.className = "message";
+                message.textContent = text;
+            }
+
+            function setEditing(roomId, editing) {
+                const editButton = document.querySelector(
+                    '.edit-room[data-room-id="' + roomId + '"]'
+                );
+
+                const deleteButton = document.querySelector(
+                    '.delete-room[data-room-id="' + roomId + '"]'
+                );
+
+                const form = document.getElementById(
+                    "edit-form-" + roomId
+                );
+
+                form.style.display = editing ? "flex" : "none";
+
+                if (editButton) {
+                    editButton.style.display =
+                        editing ? "none" : "inline-block";
+                }
+
+                if (deleteButton) {
+                    deleteButton.style.display =
+                        editing ? "none" : "inline-block";
+                }
+            }
+
+            document
+                .getElementById("create-room-form")
+                .addEventListener("submit", async function (event) {
+                    event.preventDefault();
+
+                    const name = document.getElementById(
+                        "create-name"
+                    ).value.trim();
+
+                    const capacity = document.getElementById(
+                        "create-capacity"
+                    ).value;
+
+                    const location = document.getElementById(
+                        "create-location"
+                    ).value.trim();
+
+                    const description = document.getElementById(
+                        "create-description"
+                    ).value.trim();
+
+                    try {
+                        const response = await fetch(
+                            "/api/rooms",
+                            {
+                                method: "POST",
+                                headers: {
+                                    "Content-Type": "application/json"
+                                },
+                                body: JSON.stringify({
+                                    name: name,
+                                    capacity: Number(capacity),
+                                    location: location,
+                                    description: description
+                                })
+                            }
+                        );
+
+                        const data = await response.json();
+
+                        if (!response.ok) {
+                            showMessage(
+                                data.error ||
+                                "Unable to create room."
+                            );
+                            return;
+                        }
+
+                        window.location.reload();
+
+                    } catch (error) {
+                        showMessage(
+                            "Unable to create room."
+                        );
+                    }
+                });
+
+            document
+                .querySelectorAll(".edit-room")
+                .forEach(button => {
+                    button.addEventListener("click", function () {
+                        setEditing(
+                            this.dataset.roomId,
+                            true
+                        );
+                    });
+                });
+
+            document
+                .querySelectorAll(".cancel-room-edit")
+                .forEach(button => {
+                    button.addEventListener("click", function () {
+                        setEditing(
+                            this.dataset.roomId,
+                            false
+                        );
+                    });
+                });
+
+            document
+                .querySelectorAll(".save-room")
+                .forEach(button => {
+                    button.addEventListener("click", async function () {
+                        const roomId = this.dataset.roomId;
+
+                        const name = document.getElementById(
+                            "name-" + roomId
+                        ).value.trim();
+
+                        const capacity = document.getElementById(
+                            "capacity-" + roomId
+                        ).value;
+
+                        const location = document.getElementById(
+                            "location-" + roomId
+                        ).value.trim();
+
+                        const description = document.getElementById(
+                            "description-" + roomId
+                        ).value.trim();
+
+                        const active =
+                            document.getElementById(
+                                "active-" + roomId
+                            ).value === "true";
+
+                        if (!name || !capacity) {
+                            showMessage(
+                                "Name and capacity are required."
+                            );
+                            return;
+                        }
+
+                        try {
+                            const response = await fetch(
+                                "/api/rooms/" + roomId,
+                                {
+                                    method: "PUT",
+                                    headers: {
+                                        "Content-Type": "application/json"
+                                    },
+                                    body: JSON.stringify({
+                                        name: name,
+                                        capacity: Number(capacity),
+                                        location: location,
+                                        description: description,
+                                        active: active
+                                    })
+                                }
+                            );
+
+                            const data = await response.json();
+
+                            if (!response.ok) {
+                                showMessage(
+                                    data.error ||
+                                    "Unable to update room."
+                                );
+                                return;
+                            }
+
+                            window.location.reload();
+
+                        } catch (error) {
+                            showMessage(
+                                "Unable to update room."
+                            );
+                        }
+                    });
+                });
+
+            document
+                .querySelectorAll(".delete-room")
+                .forEach(button => {
+                    button.addEventListener("click", async function () {
+                        const roomId = this.dataset.roomId;
+
+                        try {
+                            const response = await fetch(
+                                "/api/rooms/" + roomId,
+                                {
+                                    method: "DELETE"
+                                }
+                            );
+
+                            if (!response.ok) {
+                                const data = await response.json();
+
+                                showMessage(
+                                    data.error ||
+                                    "Unable to delete room."
+                                );
+
+                                return;
+                            }
+
+                            window.location.reload();
+
+                        } catch (error) {
+                            showMessage(
+                                "Unable to delete room."
+                            );
+                        }
+                    });
+                });
+        </script>
+
+    </body>
+
+</html>

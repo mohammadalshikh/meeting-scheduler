@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from functools import wraps
+from zoneinfo import ZoneInfo
 
 from flask import (
     Blueprint,
@@ -163,6 +164,17 @@ def reservations():
 def admin_users():
     users = UserService.get_all()
 
+    eastern = ZoneInfo("America/Toronto")
+
+    for user in users:
+        created_at = user.get("created_at")
+
+        if created_at is not None:
+            if created_at.tzinfo is None:
+                created_at = created_at.replace(tzinfo=ZoneInfo("UTC"))
+
+            user["created_at"] = created_at.astimezone(eastern)
+
     return render_template(
         "admin_users.html",
         users=users,
@@ -177,4 +189,15 @@ def admin_reservations():
     return render_template(
         "admin_reservations.html",
         reservations=reservations,
+    )
+
+
+@web.route("/admin/rooms")
+@admin_required
+def admin_rooms():
+    rooms = RoomService.get_all(active_only=False)
+
+    return render_template(
+        "admin_rooms.html",
+        rooms=rooms,
     )

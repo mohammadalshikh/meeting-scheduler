@@ -9,6 +9,7 @@
     </head>
 
     <body>
+
         <main class="container">
 
             <a href="{{ url_for('web.index') }}">
@@ -16,6 +17,8 @@
             </a>
 
             <h1>Manage Users</h1>
+
+            <div id="message"></div>
 
             {% if users %}
 
@@ -26,16 +29,63 @@
                 <h3>{{ user.username }}</h3>
 
                 <p>
-                    Email: {{ user.email }}
+                    <strong>Email:</strong>
+                    {{ user.email }}
                 </p>
 
                 <p>
-                    Role: {{ user.role }}
+                    <strong>Role:</strong>
+                    {{ user.role }}
                 </p>
 
                 <p>
-                    Created: {{ user.created_at }}
+                    <strong>Created:</strong>
+                    {{ user.created_at.strftime("%b %-d, %Y %-I:%M %p") }}
                 </p>
+
+                {% if user.id != session.get("user_id") %}
+
+                <div class="user-actions">
+
+                    <button type="button" class="edit-user" data-user-id="{{ user.id }}">
+                        Edit
+                    </button>
+
+                    <button type="button" class="delete-user" data-user-id="{{ user.id }}">
+                        Delete
+                    </button>
+
+                </div>
+
+                <form class="user-edit-form" id="edit-form-{{ user.id }}" style="display: none;">
+
+                    <label for="username-{{ user.id }}">
+                        Username
+                    </label>
+
+                    <input id="username-{{ user.id }}" type="text" value="{{ user.username }}" maxlength="50" required>
+
+                    <label for="email-{{ user.id }}">
+                        Email
+                    </label>
+
+                    <input id="email-{{ user.id }}" type="email" value="{{ user.email }}" maxlength="255" required>
+
+                    <div class="edit-actions">
+
+                        <button type="button" class="save-user" data-user-id="{{ user.id }}">
+                            Save
+                        </button>
+
+                        <button type="button" class="cancel-user-edit" data-user-id="{{ user.id }}">
+                            Cancel
+                        </button>
+
+                    </div>
+
+                </form>
+
+                {% endif %}
 
             </div>
 
@@ -48,6 +98,155 @@
             {% endif %}
 
         </main>
+
+        <script>
+            function showMessage(text) {
+                const message = document.getElementById("message");
+
+                message.className = "message";
+                message.textContent = text;
+            }
+
+            function setEditing(userId, editing) {
+                const editButton = document.querySelector(
+                    '.edit-user[data-user-id="' + userId + '"]'
+                );
+
+                const deleteButton = document.querySelector(
+                    '.delete-user[data-user-id="' + userId + '"]'
+                );
+
+                const form = document.getElementById(
+                    "edit-form-" + userId
+                );
+
+                form.style.display = editing ? "flex" : "none";
+
+                if (editButton) {
+                    editButton.style.display =
+                        editing ? "none" : "inline-block";
+                }
+
+                if (deleteButton) {
+                    deleteButton.style.display =
+                        editing ? "none" : "inline-block";
+                }
+            }
+
+            document
+                .querySelectorAll(".edit-user")
+                .forEach(button => {
+                    button.addEventListener("click", function () {
+                        setEditing(
+                            this.dataset.userId,
+                            true
+                        );
+                    });
+                });
+
+            document
+                .querySelectorAll(".cancel-user-edit")
+                .forEach(button => {
+                    button.addEventListener("click", function () {
+                        setEditing(
+                            this.dataset.userId,
+                            false
+                        );
+                    });
+                });
+
+            document
+                .querySelectorAll(".save-user")
+                .forEach(button => {
+                    button.addEventListener("click", async function () {
+                        const userId = this.dataset.userId;
+
+                        const username = document.getElementById(
+                            "username-" + userId
+                        ).value.trim();
+
+                        const email = document.getElementById(
+                            "email-" + userId
+                        ).value.trim();
+
+                        if (!username || !email) {
+                            showMessage(
+                                "Username and email are required."
+                            );
+                            return;
+                        }
+
+                        try {
+                            const response = await fetch(
+                                "/api/admin/users/" + userId,
+                                {
+                                    method: "PUT",
+                                    headers: {
+                                        "Content-Type": "application/json"
+                                    },
+                                    body: JSON.stringify({
+                                        username: username,
+                                        email: email
+                                    })
+                                }
+                            );
+
+                            const data = await response.json();
+
+                            if (!response.ok) {
+                                showMessage(
+                                    data.error ||
+                                    "Unable to update user."
+                                );
+                                return;
+                            }
+
+                            window.location.reload();
+
+                        } catch (error) {
+                            showMessage(
+                                "Unable to update user."
+                            );
+                        }
+                    });
+                });
+
+            document
+                .querySelectorAll(".delete-user")
+                .forEach(button => {
+                    button.addEventListener("click", async function () {
+                        const userId = this.dataset.userId;
+
+                        try {
+                            const response = await fetch(
+                                "/api/admin/users/" + userId,
+                                {
+                                    method: "DELETE"
+                                }
+                            );
+
+                            if (!response.ok) {
+                                const data = await response.json();
+
+                                showMessage(
+                                    data.error ||
+                                    "Unable to delete user."
+                                );
+
+                                return;
+                            }
+
+                            window.location.reload();
+
+                        } catch (error) {
+                            showMessage(
+                                "Unable to delete user."
+                            );
+                        }
+                    });
+                });
+        </script>
+
     </body>
 
 </html>

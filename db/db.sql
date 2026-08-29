@@ -57,7 +57,7 @@ CREATE TABLE reservations (
     CONSTRAINT fk_reservation_user
         FOREIGN KEY (user_id)
         REFERENCES users(id)
-        ON DELETE RESTRICT
+        ON DELETE CASCADE
         ON UPDATE CASCADE,
 
     CONSTRAINT fk_reservation_room
@@ -107,7 +107,7 @@ CREATE TABLE audit_log (
 
 
 -- =========================================================
--- 5. SAMPLE ROOMS
+-- 5. SAMPLE DATA
 -- =========================================================
 
 INSERT INTO rooms (name, capacity, location, description)
@@ -116,3 +116,8 @@ VALUES
     ('Room B', 8, '1st Floor', 'Medium meeting room'),
     ('Room C', 16, '2nd Floor', 'Large conference room'),
     ('Room D', 12, '2nd Floor', 'Presentation room');
+
+INSERT INTO users (username, email, password_hash, role)
+VALUES
+    ('admin', 'pladmin@gmail.com', 'scrypt:32768:8:1$z67TLABU8bj33zvs$d580a42ba7eb1f94ae983affad92439be7f9bae5d63c06be33e6027f5e470ad41b885c2cc9da4e8d11558474a298984db71b398e8f5a82d752d15462c67c775a', 'admin'),
+    ('mo', 'pluser@gmail.com', 'scrypt:32768:8:1$ol6R7VGPTXNtmd2E$92882b123ba77b7d924beac90f4d0d6fd5e1b0b1fff38b7c192d2e5816a33e9e64b17f4b3e1cb3d89718c13637087e3d3c14ca314f84279ecfe82b26156d385b', 'user');

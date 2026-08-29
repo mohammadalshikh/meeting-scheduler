@@ -121,6 +121,17 @@ def test_admin_can_update_user(client, monkeypatch):
     login(client, role="admin")
 
     monkeypatch.setattr(
+        "controllers.api.UserService.get_by_id",
+        lambda user_id: {
+            "id": user_id,
+            "username": "bob",
+            "email": "bob@example.com",
+            "password_hash": "secret",
+            "role": "user",
+        },
+    )
+
+    monkeypatch.setattr(
         "controllers.api.UserService.update",
         lambda **kwargs: {
             "id": kwargs["user_id"],
@@ -136,13 +147,48 @@ def test_admin_can_update_user(client, monkeypatch):
         json={
             "username": "bob2",
             "email": "bob2@example.com",
-            "role": "user",
         },
     )
 
     assert response.status_code == 200
     assert response.json["username"] == "bob2"
+    assert response.json["email"] == "bob2@example.com"
+    assert response.json["role"] == "user"
     assert "password_hash" not in response.json
+
+
+def test_admin_update_user_requires_username_and_email(client):
+    login(client, role="admin")
+
+    response = client.put(
+        "/api/admin/users/2",
+        json={
+            "username": "bob2",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json == {"error": "username and email are required"}
+
+
+def test_admin_cannot_update_missing_user(client, monkeypatch):
+    login(client, role="admin")
+
+    monkeypatch.setattr(
+        "controllers.api.UserService.get_by_id",
+        lambda user_id: None,
+    )
+
+    response = client.put(
+        "/api/admin/users/999",
+        json={
+            "username": "missing",
+            "email": "missing@example.com",
+        },
+    )
+
+    assert response.status_code == 404
+    assert response.json == {"error": "User not found"}
 
 
 def test_admin_cannot_delete_own_account(client):
@@ -152,6 +198,29 @@ def test_admin_cannot_delete_own_account(client):
 
     assert response.status_code == 400
     assert response.json["error"] == "Cannot delete your own account"
+
+
+def test_admin_can_delete_user(client, monkeypatch):
+    login(client, user_id=1, role="admin")
+
+    deleted = {}
+
+    def fake_delete(user_id, actor_id):
+        deleted["user_id"] = user_id
+        deleted["actor_id"] = actor_id
+
+    monkeypatch.setattr(
+        "controllers.api.UserService.delete",
+        fake_delete,
+    )
+
+    response = client.delete("/api/admin/users/2")
+
+    assert response.status_code == 204
+    assert deleted == {
+        "user_id": 2,
+        "actor_id": 1,
+    }
 
 
 def test_rooms_are_public(client, monkeypatch):
@@ -431,9 +500,14 @@ def test_user_can_delete_own_reservation(client, monkeypatch):
 
     deleted = {}
 
-    def fake_delete(reservation_id, actor_id):
+    def fake_delete(
+        reservation_id,
+        actor_id,
+        actor_role,
+    ):
         deleted["reservation_id"] = reservation_id
         deleted["actor_id"] = actor_id
+        deleted["actor_role"] = actor_role
 
     monkeypatch.setattr(
         "controllers.api.ReservationService.delete",
@@ -446,6 +520,7 @@ def test_user_can_delete_own_reservation(client, monkeypatch):
     assert deleted == {
         "reservation_id": 10,
         "actor_id": 1,
+        "actor_role": "user",
     }
 
 
@@ -465,9 +540,14 @@ def test_admin_can_delete_another_users_reservation(
 
     deleted = {}
 
-    def fake_delete(reservation_id, actor_id):
+    def fake_delete(
+        reservation_id,
+        actor_id,
+        actor_role,
+    ):
         deleted["reservation_id"] = reservation_id
         deleted["actor_id"] = actor_id
+        deleted["actor_role"] = actor_role
 
     monkeypatch.setattr(
         "controllers.api.ReservationService.delete",
@@ -480,4 +560,5 @@ def test_admin_can_delete_another_users_reservation(
     assert deleted == {
         "reservation_id": 10,
         "actor_id": 1,
+        "actor_role": "admin",
     }

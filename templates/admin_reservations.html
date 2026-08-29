@@ -18,6 +18,8 @@
 
             <h1>Manage Reservations</h1>
 
+            <div id="message"></div>
+
             {% with messages = get_flashed_messages() %}
             {% for message in messages %}
             <p class="message">{{ message }}</p>
@@ -57,13 +59,69 @@
                     {{ reservation.status }}
                 </p>
 
-                {% if reservation.status == "confirmed" %}
+                <div class="reservation-actions">
 
-                <button type="button" class="delete-reservation" data-reservation-id="{{ reservation.id }}">
-                    Delete
-                </button>
+                    <button type="button" class="edit-reservation" data-reservation-id="{{ reservation.id }}"
+                        data-room-id="{{ reservation.room_id }}">
+                        Edit
+                    </button>
 
-                {% endif %}
+                    {% if reservation.status == "confirmed" %}
+
+                    <button type="button" class="delete-reservation" data-reservation-id="{{ reservation.id }}">
+                        Delete
+                    </button>
+
+                    {% endif %}
+
+                </div>
+
+                <form class="reservation-edit-form" id="edit-form-{{ reservation.id }}" style="display: none;">
+
+                    <label for="room-{{ reservation.id }}">
+                        Room
+                    </label>
+
+                    <select id="room-{{ reservation.id }}" class="edit-room" required>
+                        <option value="">
+                            Loading rooms...
+                        </option>
+                    </select>
+
+                    <label for="title-{{ reservation.id }}">
+                        Title
+                    </label>
+
+                    <input id="title-{{ reservation.id }}" type="text" value="{{ reservation.title }}" maxlength="150"
+                        required>
+
+                    <label for="start-{{ reservation.id }}">
+                        Start
+                    </label>
+
+                    <input id="start-{{ reservation.id }}" type="datetime-local"
+                        value="{{ reservation.start_time.strftime('%Y-%m-%dT%H:%M') }}" required>
+
+                    <label for="end-{{ reservation.id }}">
+                        End
+                    </label>
+
+                    <input id="end-{{ reservation.id }}" type="datetime-local"
+                        value="{{ reservation.end_time.strftime('%Y-%m-%dT%H:%M') }}" required>
+
+                    <div class="edit-actions">
+
+                        <button type="button" class="save-reservation" data-reservation-id="{{ reservation.id }}">
+                            Save
+                        </button>
+
+                        <button type="button" class="cancel-edit" data-reservation-id="{{ reservation.id }}">
+                            Cancel
+                        </button>
+
+                    </div>
+
+                </form>
 
             </div>
 
@@ -78,48 +136,245 @@
         </main>
 
         <script>
+            function showMessage(text) {
+                const message = document.getElementById("message");
+
+                message.className = "message";
+                message.textContent = text;
+            }
+
+            function setEditing(reservationId, editing) {
+                const editButton = document.querySelector(
+                    '.edit-reservation[data-reservation-id="' +
+                    reservationId +
+                    '"]'
+                );
+
+                const deleteButton = document.querySelector(
+                    '.delete-reservation[data-reservation-id="' +
+                    reservationId +
+                    '"]'
+                );
+
+                const form = document.getElementById(
+                    "edit-form-" + reservationId
+                );
+
+                form.style.display = editing ? "flex" : "none";
+
+                if (editButton) {
+                    editButton.style.display =
+                        editing ? "none" : "inline-block";
+                }
+
+                if (deleteButton) {
+                    deleteButton.style.display =
+                        editing ? "none" : "inline-block";
+                }
+            }
+
+            async function loadRooms(
+                reservationId,
+                currentRoomId
+            ) {
+                const roomSelect = document.getElementById(
+                    "room-" + reservationId
+                );
+
+                roomSelect.innerHTML =
+                    '<option value="">Loading rooms...</option>';
+
+                try {
+                    const response = await fetch(
+                        "/api/rooms?active_only=true"
+                    );
+
+                    const rooms = await response.json();
+
+                    if (!response.ok) {
+                        showMessage(
+                            rooms.error ||
+                            "Unable to load rooms."
+                        );
+                        return;
+                    }
+
+                    roomSelect.innerHTML = "";
+
+                    if (rooms.length === 0) {
+                        roomSelect.innerHTML =
+                            '<option value="">No active rooms available</option>';
+                        return;
+                    }
+
+                    rooms.forEach(room => {
+                        const option =
+                            document.createElement("option");
+
+                        option.value = room.id;
+
+                        option.textContent =
+                            room.name +
+                            " (" +
+                            room.capacity +
+                            " seats)";
+
+                        if (
+                            String(room.id) ===
+                            String(currentRoomId)
+                        ) {
+                            option.selected = true;
+                        }
+
+                        roomSelect.appendChild(option);
+                    });
+
+                } catch (error) {
+                    showMessage(
+                        "Unable to load rooms."
+                    );
+                }
+            }
+
+            document
+                .querySelectorAll(".edit-reservation")
+                .forEach(button => {
+                    button.addEventListener("click", function () {
+                        const reservationId =
+                            this.dataset.reservationId;
+
+                        const currentRoomId =
+                            this.dataset.roomId;
+
+                        setEditing(
+                            reservationId,
+                            true
+                        );
+
+                        loadRooms(
+                            reservationId,
+                            currentRoomId
+                        );
+                    });
+                });
+
+            document
+                .querySelectorAll(".cancel-edit")
+                .forEach(button => {
+                    button.addEventListener("click", function () {
+                        setEditing(
+                            this.dataset.reservationId,
+                            false
+                        );
+                    });
+                });
+
+            document
+                .querySelectorAll(".save-reservation")
+                .forEach(button => {
+                    button.addEventListener("click", async function () {
+                        const reservationId =
+                            this.dataset.reservationId;
+
+                        const roomId =
+                            document.getElementById(
+                                "room-" + reservationId
+                            ).value;
+
+                        const title =
+                            document.getElementById(
+                                "title-" + reservationId
+                            ).value.trim();
+
+                        const startTime =
+                            document.getElementById(
+                                "start-" + reservationId
+                            ).value;
+
+                        const endTime =
+                            document.getElementById(
+                                "end-" + reservationId
+                            ).value;
+
+                        if (
+                            !roomId ||
+                            !title ||
+                            !startTime ||
+                            !endTime
+                        ) {
+                            showMessage(
+                                "All fields are required."
+                            );
+                            return;
+                        }
+
+                        try {
+                            const response = await fetch(
+                                "/api/reservations/" +
+                                reservationId,
+                                {
+                                    method: "PUT",
+                                    headers: {
+                                        "Content-Type":
+                                            "application/json"
+                                    },
+                                    body: JSON.stringify({
+                                        room_id: Number(roomId),
+                                        title: title,
+                                        start_time:
+                                            startTime + ":00",
+                                        end_time:
+                                            endTime + ":00",
+                                        status: "confirmed"
+                                    })
+                                }
+                            );
+
+                            const data =
+                                await response.json();
+
+                            if (!response.ok) {
+                                showMessage(
+                                    data.error ||
+                                    "Unable to update reservation."
+                                );
+                                return;
+                            }
+
+                            window.location.reload();
+
+                        } catch (error) {
+                            showMessage(
+                                "Unable to update reservation."
+                            );
+                        }
+                    });
+                });
+
             document
                 .querySelectorAll(".delete-reservation")
                 .forEach(button => {
                     button.addEventListener("click", async function () {
-                        const reservationId = this.dataset.reservationId;
+                        const reservationId =
+                            this.dataset.reservationId;
 
                         try {
                             const response = await fetch(
-                                "/api/reservations/" + reservationId,
+                                "/api/reservations/" +
+                                reservationId,
                                 {
                                     method: "DELETE"
                                 }
                             );
 
-                            const data = response.status === 204
-                                ? {}
-                                : await response.json();
-
                             if (!response.ok) {
-                                const messageContainer =
-                                    document.getElementById("message");
+                                const data =
+                                    await response.json();
 
-                                if (messageContainer) {
-                                    messageContainer.textContent =
-                                        data.error ||
-                                        "Unable to delete reservation.";
-                                } else {
-                                    const message = document.createElement("p");
-
-                                    message.className = "message";
-                                    message.id = "message";
-                                    message.textContent =
-                                        data.error ||
-                                        "Unable to delete reservation.";
-
-                                    document
-                                        .querySelector("main")
-                                        .insertBefore(
-                                            message,
-                                            document.querySelector("h1")
-                                        );
-                                }
+                                showMessage(
+                                    data.error ||
+                                    "Unable to delete reservation."
+                                );
 
                                 return;
                             }
@@ -127,24 +382,9 @@
                             window.location.reload();
 
                         } catch (error) {
-                            let messageContainer =
-                                document.getElementById("message");
-
-                            if (!messageContainer) {
-                                messageContainer = document.createElement("p");
-                                messageContainer.className = "message";
-                                messageContainer.id = "message";
-
-                                document
-                                    .querySelector("main")
-                                    .insertBefore(
-                                        messageContainer,
-                                        document.querySelector("h1")
-                                    );
-                            }
-
-                            messageContainer.textContent =
-                                "Unable to delete reservation.";
+                            showMessage(
+                                "Unable to delete reservation."
+                            );
                         }
                     });
                 });

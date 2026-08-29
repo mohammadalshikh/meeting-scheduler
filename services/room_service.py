@@ -179,12 +179,13 @@ class RoomService:
         finally:
             connection.close()
 
+
     @staticmethod
-    def update(room_id, name, capacity, location, description, active, actor_id):
+    def update(room_id, name, capacity, location, description, active, actor_id,):
         connection = DbService.get_connection()
 
         try:
-            old_room = RoomService._get_by_id(connection, room_id)
+            old_room = RoomService._get_by_id(connection,room_id,)
 
             if old_room is None:
                 raise ValueError("Room not found")
@@ -200,10 +201,20 @@ class RoomService:
                         active = %s
                     WHERE id = %s
                     """,
-                    (name, capacity, location, description, active, room_id),
+                    (name, capacity, location, description, active, room_id,),
                 )
 
-            new_room = RoomService._get_by_id(connection, room_id)
+                if old_room.active and not active:
+                    cursor.execute(
+                        """
+                        DELETE FROM reservations
+                        WHERE room_id = %s
+                        AND start_time > NOW()
+                        """,
+                        (room_id,),
+                    )
+
+            new_room = RoomService._get_by_id(connection, room_id,)
 
             AuditService.log(
                 connection,
@@ -216,11 +227,13 @@ class RoomService:
             )
 
             connection.commit()
+
             return new_room.to_dict()
 
         except Exception:
             connection.rollback()
             raise
+
         finally:
             connection.close()
 

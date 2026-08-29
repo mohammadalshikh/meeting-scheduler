@@ -390,24 +390,35 @@ class ReservationService:
         finally:
             connection.close()
 
+
     @staticmethod
-    def delete(reservation_id, actor_id):
+    def delete(reservation_id, actor_id, actor_role="user"):
         connection = DbService.get_connection()
 
         try:
-            old_reservation = ReservationService._get_by_id(connection, reservation_id)
+            reservation = ReservationService._get_by_id(
+                connection,
+                reservation_id,
+            )
 
-            if old_reservation is None:
+            if reservation is None:
                 raise ValueError("Reservation not found")
 
-            if old_reservation.start_time <= datetime.now() + timedelta(hours=24):
+            if (
+                actor_role != "admin"
+                and reservation.start_time - datetime.now() <= timedelta(hours=24)
+            ):
                 raise ValueError(
-                    "Reservations cannot be deleted within 24 hours of their start time"
+                    "Reservations cannot be deleted within 24 hours " "of their start time"
                 )
 
             with connection.cursor() as cursor:
                 cursor.execute(
-                    "DELETE FROM reservations WHERE id = %s", (reservation_id,)
+                    """
+                    DELETE FROM reservations
+                    WHERE id = %s
+                    """,
+                    (reservation_id,),
                 )
 
             AuditService.log(
@@ -416,7 +427,7 @@ class ReservationService:
                 table_name="reservations",
                 record_id=reservation_id,
                 action="DELETE",
-                old_data=old_reservation.to_dict(),
+                old_data=reservation.to_dict(),
             )
 
             connection.commit()
@@ -424,5 +435,6 @@ class ReservationService:
         except Exception:
             connection.rollback()
             raise
+
         finally:
             connection.close()
