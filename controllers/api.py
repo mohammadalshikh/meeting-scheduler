@@ -1,4 +1,5 @@
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from flask import Blueprint, jsonify, request, session
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -10,6 +11,7 @@ from services.room_service import RoomService
 from services.reservation_service import ReservationService
 
 api = Blueprint("api", __name__, url_prefix="/api")
+tz = ZoneInfo("America/Toronto")
 
 
 def authenticated():
@@ -51,12 +53,22 @@ def clean_users(users):
     return [clean_user(user) for user in users]
 
 
+def apply_toronto_timezone(value):
+    if value is None:
+        return None
+
+    if value.tzinfo is None:
+        return value.replace(tzinfo=tz)
+
+    return value.astimezone(tz)
+
+
 def clean_reservation(reservation):
     reservation = dict(reservation)
 
     for field in ("start_time", "end_time", "created_at", "updated_at"):
         if isinstance(reservation.get(field), datetime):
-            reservation[field] = reservation[field].strftime("%b %-d, %Y %-I:%M %p")
+            reservation[field] = apply_toronto_timezone(reservation[field]).isoformat()
 
     return reservation
 
@@ -316,8 +328,8 @@ def get_available_rooms():
         return jsonify({"error": "start and end are required"}), 400
 
     try:
-        start_time = datetime.fromisoformat(start)
-        end_time = datetime.fromisoformat(end)
+        start_time = datetime.fromisoformat(start).replace(tzinfo=tz)
+        end_time = datetime.fromisoformat(end).replace(tzinfo=tz)
     except ValueError:
         return jsonify({"error": "Invalid datetime format"}), 400
 
@@ -431,8 +443,8 @@ def validate_reservation():
 
     try:
         room_id = int(data["room_id"])
-        start_time = datetime.fromisoformat(data["start_time"])
-        end_time = datetime.fromisoformat(data["end_time"])
+        start_time = datetime.fromisoformat(data["start_time"]).replace(tzinfo=tz)
+        end_time = datetime.fromisoformat(data["end_time"]).replace(tzinfo=tz)
     except (ValueError, TypeError):
         return jsonify({"error": "Invalid reservation details"}), 400
 
@@ -454,14 +466,7 @@ def validate_reservation():
             400,
         )
 
-    return (
-        jsonify(
-            {
-                "valid": True,
-            }
-        ),
-        200,
-    )
+    return jsonify({"valid": True}), 200
 
 
 @api.route("/reservations/<int:reservation_id>", methods=["GET"])
@@ -506,8 +511,8 @@ def create_reservation():
             user_id=session["user_id"],
             room_id=int(data["room_id"]),
             title=data["title"],
-            start_time=datetime.fromisoformat(data["start_time"]),
-            end_time=datetime.fromisoformat(data["end_time"]),
+            start_time=datetime.fromisoformat(data["start_time"]).replace(tzinfo=tz),
+            end_time=datetime.fromisoformat(data["end_time"]).replace(tzinfo=tz),
         )
     except (ValueError, TypeError) as error:
         return jsonify({"error": str(error)}), 400
@@ -548,8 +553,8 @@ def update_reservation(reservation_id):
             reservation_id=reservation_id,
             room_id=int(data["room_id"]),
             title=data["title"],
-            start_time=datetime.fromisoformat(data["start_time"]),
-            end_time=datetime.fromisoformat(data["end_time"]),
+            start_time=datetime.fromisoformat(data["start_time"]).replace(tzinfo=tz),
+            end_time=datetime.fromisoformat(data["end_time"]).replace(tzinfo=tz),
             status=data["status"],
             actor_id=session["user_id"],
         )

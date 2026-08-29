@@ -1,9 +1,11 @@
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from models.reservation import Reservation
 from services.audit_service import AuditService
 from services.db_service import DbService
 
+tz = ZoneInfo("America/Toronto")
 
 class ReservationService:
 
@@ -118,7 +120,7 @@ class ReservationService:
         if start_time.minute not in (0, 30) or end_time.minute not in (0, 30):
             raise ValueError("Reservations must use 30-minute increments")
 
-        now = datetime.now()
+        now = datetime.now(tz)
 
         earliest = now.replace(
             minute=0,
@@ -299,6 +301,9 @@ class ReservationService:
                 end_time,
             )
 
+            start_time_db = start_time.replace(tzinfo=None)
+            end_time_db = end_time.replace(tzinfo=None)
+
             with connection.cursor() as cursor:
                 cursor.execute(
                     """
@@ -307,7 +312,13 @@ class ReservationService:
                     VALUES
                         (%s, %s, %s, %s, %s)
                 """,
-                    (user_id, room_id, title, start_time, end_time),
+                    (
+                        user_id,
+                        room_id,
+                        title,
+                        start_time_db,
+                        end_time_db,
+                    ),
                 )
 
                 reservation_id = cursor.lastrowid
@@ -355,6 +366,9 @@ class ReservationService:
                     reservation_id,
                 )
 
+            start_time_db = start_time.replace(tzinfo=None)
+            end_time_db = end_time.replace(tzinfo=None)
+
             with connection.cursor() as cursor:
                 cursor.execute(
                     """
@@ -366,7 +380,14 @@ class ReservationService:
                         status = %s
                     WHERE id = %s
                 """,
-                    (room_id, title, start_time, end_time, status, reservation_id),
+                    (
+                        room_id,
+                        title,
+                        start_time_db,
+                        end_time_db,
+                        status,
+                        reservation_id,
+                    ),
                 )
 
             new_reservation = ReservationService._get_by_id(connection, reservation_id)
@@ -390,7 +411,6 @@ class ReservationService:
         finally:
             connection.close()
 
-
     @staticmethod
     def delete(reservation_id, actor_id, actor_role="user"):
         connection = DbService.get_connection()
@@ -404,13 +424,10 @@ class ReservationService:
             if reservation is None:
                 raise ValueError("Reservation not found")
 
-            if (
-                actor_role != "admin"
-                and reservation.start_time - datetime.now() <= timedelta(hours=24)
+            if (actor_role != "admin"
+                and reservation.start_time.replace(tzinfo=tz) - datetime.now(tz) <= timedelta(hours=24)
             ):
-                raise ValueError(
-                    "Reservations cannot be deleted within 24 hours " "of their start time"
-                )
+                raise ValueError("Reservations cannot be deleted within 24 hours of their start time")
 
             with connection.cursor() as cursor:
                 cursor.execute(

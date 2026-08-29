@@ -117,12 +117,6 @@ button:hover,
     border: 1px solid var(--border);
 }
 
-#error-message {
-    margin: 20px 0;
-    border-color: #d9534f;
-    background: #fff5f5;
-}
-
 .room-list,
 .reservation-list {
     display: flex;

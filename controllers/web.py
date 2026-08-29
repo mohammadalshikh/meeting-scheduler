@@ -16,6 +16,7 @@ from services.reservation_service import ReservationService
 from services.user_service import UserService
 
 web = Blueprint("web", __name__)
+tz = ZoneInfo("America/Toronto")
 
 
 def login_required(view):
@@ -78,7 +79,7 @@ def logout():
 
 @web.route("/schedule")
 def schedule():
-    now = datetime.now()
+    now = datetime.now(tz)
     today = now.date()
 
     if (
@@ -118,11 +119,14 @@ def schedule():
             start_time = reservation["start_time"]
             end_time = reservation["end_time"]
 
-            if hasattr(start_time, "isoformat"):
-                reservation["start_time"] = start_time.isoformat()
+            if start_time.tzinfo is None:
+                start_time = start_time.replace(tzinfo=tz)
 
-            if hasattr(end_time, "isoformat"):
-                reservation["end_time"] = end_time.isoformat()
+            if end_time.tzinfo is None:
+                end_time = end_time.replace(tzinfo=tz)
+
+            reservation["start_time"] = start_time.isoformat()
+            reservation["end_time"] = end_time.isoformat()
 
             start_minutes = start_time.hour * 60 + start_time.minute - 540
 
@@ -164,16 +168,14 @@ def reservations():
 def admin_users():
     users = UserService.get_all()
 
-    eastern = ZoneInfo("America/Toronto")
-
     for user in users:
         created_at = user.get("created_at")
 
         if created_at is not None:
             if created_at.tzinfo is None:
-                created_at = created_at.replace(tzinfo=ZoneInfo("UTC"))
+                created_at = created_at.replace(tzinfo=tz)
 
-            user["created_at"] = created_at.astimezone(eastern)
+            user["created_at"] = created_at
 
     return render_template(
         "admin_users.html",
