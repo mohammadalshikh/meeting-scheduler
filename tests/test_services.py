@@ -5,9 +5,22 @@ import pytest
 
 from services.audit_service import AuditService
 from services.db_service import DbService
-from services.reservation_service import ReservationService
+from services.reservation_service import ReservationService, tz
 from services.room_service import RoomService
 from services.user_service import UserService
+
+
+class _FixedNow(datetime):
+    """Stand-in for datetime whose now() is pinned, so validate_request's
+    'earliest'/'latest' window does not depend on the wall clock."""
+
+    @classmethod
+    def now(cls, tzinfo=None):
+        return cls(2026, 9, 1, 9, 0, tzinfo=tzinfo)
+
+
+def _freeze_clock(monkeypatch):
+    monkeypatch.setattr("services.reservation_service.datetime", _FixedNow)
 
 
 def make_connection(fetchone_values=None, lastrowid=1):
@@ -79,15 +92,7 @@ def test_validate_rejects_non_30_minute_increment():
 
 
 def test_validate_rejects_more_than_7_days_ahead(monkeypatch):
-    class FixedDateTime(datetime):
-        @classmethod
-        def now(cls):
-            return cls(2026, 9, 1, 10, 0)
-
-    monkeypatch.setattr(
-        "services.reservation_service.datetime",
-        FixedDateTime,
-    )
+    _freeze_clock(monkeypatch)
 
     with pytest.raises(
         ValueError,
@@ -96,12 +101,14 @@ def test_validate_rejects_more_than_7_days_ahead(monkeypatch):
         ReservationService.validate_request(
             user_id=1,
             room_id=1,
-            start_time=datetime(2026, 9, 9, 10, 0),
-            end_time=datetime(2026, 9, 9, 11, 0),
+            start_time=datetime(2026, 9, 9, 10, 0, tzinfo=tz),
+            end_time=datetime(2026, 9, 9, 11, 0, tzinfo=tz),
         )
 
 
 def test_validate_rejects_inactive_room(monkeypatch):
+    _freeze_clock(monkeypatch)
+
     connection, _ = make_connection(
         fetchone_values=[
             {
@@ -124,14 +131,16 @@ def test_validate_rejects_inactive_room(monkeypatch):
         ReservationService.validate_request(
             user_id=1,
             room_id=1,
-            start_time=datetime(2026, 9, 1, 10, 0),
-            end_time=datetime(2026, 9, 1, 11, 0),
+            start_time=datetime(2026, 9, 1, 10, 0, tzinfo=tz),
+            end_time=datetime(2026, 9, 1, 11, 0, tzinfo=tz),
         )
 
     connection.close.assert_called_once()
 
 
 def test_validate_rejects_same_room_twice_same_day(monkeypatch):
+    _freeze_clock(monkeypatch)
+
     connection, _ = make_connection(
         fetchone_values=[
             {
@@ -157,12 +166,14 @@ def test_validate_rejects_same_room_twice_same_day(monkeypatch):
         ReservationService.validate_request(
             user_id=1,
             room_id=1,
-            start_time=datetime(2026, 9, 1, 10, 0),
-            end_time=datetime(2026, 9, 1, 11, 0),
+            start_time=datetime(2026, 9, 1, 10, 0, tzinfo=tz),
+            end_time=datetime(2026, 9, 1, 11, 0, tzinfo=tz),
         )
 
 
 def test_validate_rejects_more_than_5_hours_per_day(monkeypatch):
+    _freeze_clock(monkeypatch)
+
     connection = MagicMock()
 
     room_cursor = MagicMock()
@@ -206,14 +217,16 @@ def test_validate_rejects_more_than_5_hours_per_day(monkeypatch):
         ReservationService.validate_request(
             user_id=1,
             room_id=1,
-            start_time=datetime(2026, 9, 1, 10, 0),
-            end_time=datetime(2026, 9, 1, 11, 0),
+            start_time=datetime(2026, 9, 1, 10, 0, tzinfo=tz),
+            end_time=datetime(2026, 9, 1, 11, 0, tzinfo=tz),
         )
 
     connection.close.assert_called_once()
 
 
 def test_validate_rejects_overlapping_reservation(monkeypatch):
+    _freeze_clock(monkeypatch)
+
     connection, _ = make_connection(
         fetchone_values=[
             {
@@ -243,8 +256,8 @@ def test_validate_rejects_overlapping_reservation(monkeypatch):
         ReservationService.validate_request(
             user_id=1,
             room_id=1,
-            start_time=datetime(2026, 9, 1, 10, 0),
-            end_time=datetime(2026, 9, 1, 11, 0),
+            start_time=datetime(2026, 9, 1, 10, 0, tzinfo=tz),
+            end_time=datetime(2026, 9, 1, 11, 0, tzinfo=tz),
         )
 
 
